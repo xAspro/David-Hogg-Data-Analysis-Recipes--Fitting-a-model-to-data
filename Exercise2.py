@@ -1,7 +1,7 @@
 """
-Reproducing the Figure 1 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
+Reproducing the Figure 2 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Not considering the first 4 data points which deviate a lot from the rest of the data points
+Considering all the data points for a linear fit
 
 """
 
@@ -19,10 +19,10 @@ sigy = np.array([61, 25, 38, 15, 21, 15, 27, 14, 30, 16, 14, 25, 52, 16, 34, 31,
 sigx = np.array([9, 4, 11, 7, 5, 9, 4, 4, 11, 7, 5, 5, 5, 6, 6, 5, 9, 8, 6, 5])
 rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, -0.69, 0.30, -0.46, -0.03, 0.50, 0.73, -0.52, 0.90, 0.40, -0.78, -0.56])
 
-ID = ID[4:].reshape(-1, 1)
-x = x[4:].reshape(-1, 1)
-y = y[4:].reshape(-1, 1)
-sigy = sigy[4:]
+ID = ID.reshape(-1, 1)
+x = x.reshape(-1, 1)
+y = y.reshape(-1, 1)
+sigy = sigy
 
 # print(ID)
 # print(x)

@@ -1,7 +1,7 @@
 """
-Reproducing the Figure 1 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
+Reproducing the Figure 3 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Not considering the first 4 data points which deviate a lot from the rest of the data points
+Considering data points for a quadratic fit. 
 
 """
 
@@ -29,10 +29,11 @@ sigy = sigy[4:]
 # print(y)
 # print(sigy)
 
-A = np.hstack((np.ones_like(x), x))
+A = np.hstack((np.ones_like(x), x, x**2))
 # print("A = ", A)
 C = np.diag(sigy**2)
 C_inv = np.linalg.inv(C)
+# C_inv = np.diag(np.ones_like(sigy))
 
 cov_matrix = np.linalg.inv(A.T @ C_inv @ A)
 # print(cov_matrix)
@@ -44,21 +45,23 @@ def fit_curve(A, C_inv, cov_matrix, y):
 
 # Fit the curve
 # Option 1: Unpack the returned array directly
-b, m = fit_curve(A, C_inv, cov_matrix, y).flatten()
+b, m, q = fit_curve(A, C_inv, cov_matrix, y).flatten()
 
 # print("b = ", b)
 # print("m = ", m)
+# print("q = ", q)
 
 # Calculate uncertainties
 A = np.vstack((np.ones_like(x), x)).T
 
-db, dm = np.sqrt(np.diag(cov_matrix))
+db, dm, dq = np.sqrt(np.diag(cov_matrix))
 # print("db = ", db)
 # print("dm = ", dm)
+# print("dq = ", dq)
 
 
 # Print the equation
-print(f"y = ({b:.2f} +/- {db:.2f})x + ({m:.2f} +/- {dm:.2f})")
+print(f"y = ({q:.4f} +/- {dq:.4f}) x^2 + ({b:.2f} +/- {db:.2f})x + ({m:.2f} +/- {dm:.2f})")
 
 # Plot the data and the fit
 
@@ -69,8 +72,10 @@ ylim_max = 700
 
 plt.errorbar(x.flatten(), y.flatten(), yerr=sigy, fmt='o', capsize=3, capthick=2, label='Data')
 x_fit = np.linspace(xlim_min, xlim_max, 100)
-y_fit = b + m * x_fit
-plt.plot(x_fit, y_fit, label=f'Fit: y = ({m:.2f} +/- {dm:.2f}) x + ({b:.0f} +/- {db:.0f})')
+y_fit = b + m * x_fit + q * x_fit**2
+# for x_val, y_val in zip(x_fit, y_fit):
+#     print(f"x_fit: {x_val}, y_fit: {y_val}")
+plt.plot(x_fit, y_fit, label=f'Fit: y = ({q:.4f} +/- {dq:.4f}) x^2 + ({m:.2f} +/- {dm:.2f}) x + ({b:.0f} +/- {db:.0f})')
 
 plt.xlabel('x')
 plt.ylabel('y')
