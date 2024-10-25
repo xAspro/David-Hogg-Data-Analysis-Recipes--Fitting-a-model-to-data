@@ -43,14 +43,11 @@ def fit_curve(A, C_inv, cov_matrix, y):
     return X
 
 # Fit the curve
-# Option 1: Unpack the returned array directly
+# Unpack the returned array directly
 b, m = fit_curve(A, C_inv, cov_matrix, y).flatten()
 
 # print("b = ", b)
 # print("m = ", m)
-
-# Calculate uncertainties
-A = np.vstack((np.ones_like(x), x)).T
 
 db, dm = np.sqrt(np.diag(cov_matrix))
 # print("db = ", db)
