@@ -16,7 +16,7 @@ x = np.linspace(0, 10, 100)  # Generate 100 points between 0 and 10
 m, c = 2, 5  # Slope and intercept
 y = m * x + c
 
-sig = 0.0001  # Standard deviation of the noise
+sig = 10  # Standard deviation of the noise
 
 # Add random noise to the y values
 noise = np.random.normal(0, sig, size=x.shape)  # Mean 0, standard deviation 1
@@ -91,7 +91,34 @@ def plot_chains(sampler):
     axes[-1].set_xlabel("Step number")
     plt.show()
 
-# Call this function after running the sampler
+
+def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=100):
+    """
+    Plot the data with error bars, best-fit line, and sample lines from MCMC.
+    """
+    # Plot data with error bars
+    plt.errorbar(x, y, yerr=sigy, fmt='o', color='red', markersize=4, label="Data")
+
+    # Choose some sample lines to show the uncertainty
+    x_plot = np.linspace(min(x), max(x), 200)
+    for i in np.random.choice(len(samples), size=n_samples_to_plot, replace=False):
+        m, b = samples[i]
+        y_sample = m * x_plot + b
+        plt.plot(x_plot, y_sample, color='gray', alpha=0.1)
+
+    # Plot the best-fit line (mean or MAP)
+    m_best = np.mean(samples[:, 0])  # or use MAP
+    b_best = np.mean(samples[:, 1])
+    y_best = m_best * x_plot + b_best
+    plt.plot(x_plot, y_best, color='blue', label='Best Fit (Mean)')
+
+    # Labels and legend
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Line fit with MCMC uncertainty")
+    plt.legend()
+    plt.show()
+
 
 
 def main():
@@ -113,6 +140,14 @@ def main():
     print("Mean of m:", np.mean(samples[:, 0]))
     print("Mean of b:", np.mean(samples[:, 1]))
 
+    print("Error of m:", np.std(samples[:, 0]))
+    print("Error of b:", np.std(samples[:, 1]))
+
+    print()
+
+    print("Absolute Error of m:", np.abs(np.mean(samples[:, 0]) - m))
+    print("Absolute Error of b:", np.abs(np.mean(samples[:, 1]) - c))
+    
     print()
 
     print("Median of m:", np.median(samples[:, 0]))
@@ -136,6 +171,9 @@ def main():
     plt.show()
 
     plot_chains(sampler)
+
+    # Plot the data with error bars and MCMC samples
+    plot_fit_with_samples(x, y, sigy, samples)
 
 
 
