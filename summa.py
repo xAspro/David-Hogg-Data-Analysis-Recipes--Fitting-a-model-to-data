@@ -16,7 +16,7 @@ x = np.linspace(0, 10, 100)  # Generate 100 points between 0 and 10
 m, c = 2, 5  # Slope and intercept
 y = m * x + c
 
-sig = 10  # Standard deviation of the noise
+sig = 1  # Standard deviation of the noise
 
 # Add random noise to the y values
 noise = np.random.normal(0, sig, size=x.shape)  # Mean 0, standard deviation 1
@@ -77,7 +77,6 @@ def plot_results(samples):
     plt.ylabel('b')
     plt.title('MCMC Results')
     plt.show()
-    return samples
 
 
 def plot_chains(sampler):
@@ -97,7 +96,7 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=100):
     Plot the data with error bars, best-fit line, and sample lines from MCMC.
     """
     # Plot data with error bars
-    plt.errorbar(x, y, yerr=sigy, fmt='o', color='red', markersize=4, label="Data")
+    plt.errorbar(x, y, yerr=sigy, fmt='o', color='red', markersize=4, label="Data", capsize=3, capthick=1)
 
     # Choose some sample lines to show the uncertainty
     x_plot = np.linspace(min(x), max(x), 200)
@@ -167,7 +166,7 @@ def main():
 
     import corner
     # corner.corner(samples, labels=["m", "b"], truths=[m, c], bins=50, smooth=1.0, show_titles=True)
-    corner.corner(samples, labels=["m", "b"], truths=[m, c], bins=150)
+    corner.corner(samples, labels=["m", "b"], quantiles=[0.16, 0.5, 0.84], truths=[m, c], bins=150, show_titles=True)
     plt.show()
 
     plot_chains(sampler)
