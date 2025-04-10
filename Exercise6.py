@@ -27,6 +27,13 @@ rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, -0
 # y = y.reshape(-1, 1)
 # sigy = sigy
 
+def logprior(params):
+    m, b, Pb, Yb, Vb = params
+    if 0 <= Pb <= 1 and Vb > 0:
+        if 0 <= m <= 5 and -200 <= b <= 200 and 0 <= Yb <= 1000:
+            return -np.log(1 + Pb) - np.log(1 + Vb)  # Prior for m, b, Pb, Yb, Vb
+    return -np.inf  # Reject everything else
+
 
 # def likelihood(xi, yi, sigyi, m, b, Pb, Yb, Vb):
 def loglikelihood(params, xi, yi, sigyi):
@@ -55,7 +62,15 @@ def loglikelihood(params, xi, yi, sigyi):
     # Calculate the likelihood
     return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
 
-def run_mcmc(xi, yi, sigyi, nwalkers=200, nsteps_burn=10, nsteps_prod=100):
+def logposterior(params, xi, yi, sigyi):
+    lp = logprior(params)
+    if not np.isfinite(lp):
+        return -np.inf
+    
+    return lp + loglikelihood(params, xi, yi, sigyi) 
+
+
+def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
     """
     Run the MCMC simulation using emcee.
     """
@@ -79,7 +94,7 @@ def run_mcmc(xi, yi, sigyi, nwalkers=200, nsteps_burn=10, nsteps_prod=100):
     p0[:, 4] = np.random.uniform(0, 100, size=nwalkers)   # Vb
 
     # Create the sampler
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, loglikelihood, args=(xi, yi, sigyi))
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=(xi, yi, sigyi))
 
     # Run the MCMC simulation
     # sampler.run_mcmc(p0, nsteps)
@@ -98,10 +113,14 @@ def plot_results(samples):
     """
     # Plot the results
     plt.figure(figsize=(10, 6))
-    plt.plot(samples[:, 0], samples[:, 1], 'k.', markersize=1)
-    plt.xlabel('m')
-    plt.ylabel('b')
+    plt.plot(samples[:, 1], samples[:, 0], 'k.', markersize=1)
+    plt.xlabel('b')
+    plt.ylabel('m')
     plt.title('MCMC Results')
+    plt.savefig('Exercise6.png', bbox_inches='tight')
+    plt.savefig('Exercise6.pdf', bbox_inches='tight')
+    plt.xlim(-125, 125)
+    plt.ylim(1.5, 3.1)
     plt.show()
     return samples
 
@@ -129,7 +148,7 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
     Plot the data with error bars, best-fit line, and sample lines from MCMC.
     """
     # Plot data with error bars
-    plt.errorbar(x, y, yerr=sigy, fmt='o', color='red', markersize=4, label="Data")
+    plt.errorbar(x, y, yerr=sigy, fmt='o', color='red', markersize=4, label="Data", capsize=3, capthick=1)
 
     # Choose some sample lines to show the uncertainty
     x_plot = np.linspace(min(x), max(x), 200)
@@ -149,6 +168,8 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
     plt.ylabel("y")
     plt.title("Line fit with MCMC uncertainty")
     plt.legend()
+    plt.savefig('Exercise6_fit.png', bbox_inches='tight')
+    plt.savefig('Exercise6_fit.pdf', bbox_inches='tight')
     plt.show()
 
 
@@ -195,14 +216,30 @@ def main():
 
 
     import corner
+    Vb = samples[:, 4]
+    mark = 10
+    # mask = np.logical_and(Vb > np.percentile(Vb, mark), Vb < np.percentile(Vb, 100 - mark))
+
+    lower, upper = np.percentile(Vb, [0, 100 - mark])
+    # ranges = [None, None, None, None, (lower, upper)]
+    ranges = [
+    (np.min(samples[:, 0]), np.max(samples[:, 0])),  # m
+    (np.min(samples[:, 1]), np.max(samples[:, 1])),  # b
+    (np.min(samples[:, 2]), np.max(samples[:, 2])),  # Pb
+    (np.min(samples[:, 3]), np.max(samples[:, 3])),  # Yb
+    (lower, upper)                                   # Vb
+    ]
+
+
     # corner.corner(samples, labels=["m", "b"], truths=[m, c], bins=50, smooth=1.0, show_titles=True)
-    corner.corner(samples, labels=["m", "b", "Pb", "Yb", "Vb"], bins=150, fig=plt.figure(figsize=(12, 7)))
+    # corner.corner(samples[mask], labels=["m", "b", "Pb", "Yb", "Vb"], quantiles=[0.16, 0.5, 0.84], bins=250, fig=plt.figure(figsize=(12, 7)))
+    corner.corner(samples, labels=["m", "b", "Pb", "Yb", "Vb"], range=ranges, quantiles=[0.16, 0.5, 0.84], bins=250, fig=plt.figure(figsize=(12, 7)), show_titles=True)
+    plt.savefig('Exercise6_corner.png', bbox_inches='tight')
+    plt.savefig('Exercise6_corner.pdf', bbox_inches='tight')
     plt.show()
 
-    # plot_chains(sampler)
-
-    # Plot the fit with samples
-    # plot_fit_with_samples(x, y, sigy, samples)
+    plot_chains(sampler)
+    plot_fit_with_samples(x, y, sigy, samples)
 
 
 
