@@ -20,6 +20,9 @@ sigy = np.array([61, 25, 38, 15, 21, 15, 27, 14, 30, 16, 14, 25, 52, 16, 34, 31,
 sigx = np.array([9, 4, 11, 7, 5, 9, 4, 4, 11, 7, 5, 5, 5, 6, 6, 5, 9, 8, 6, 5])
 rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, -0.69, 0.30, -0.46, -0.03, 0.50, 0.73, -0.52, 0.90, 0.40, -0.78, -0.56])
 
+x = x[4:]
+y = y[4:]
+sigy = sigy[4:]
 
 def logprior(params):
     m, b, Pb, Yb, Vb = params
@@ -144,7 +147,7 @@ def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
 #     plt.legend()
 #     plt.show()
 
-def plot_results(samples):
+def plot_results(part, samples):
     """
     Plot the results of the MCMC simulation.
     """
@@ -167,7 +170,7 @@ def plot_results(samples):
     cumsum /= cumsum[-1]  # Normalize to [0, 1]
 
     # Define percentiles (e.g., 68%, 95%, 99%)
-    levels = [0.25, 0.5, 0.75]
+    levels = [0.10, 0.25, 0.5, 0.75]
     contour_levels = sorted(set([H_sorted[np.searchsorted(cumsum, level)] for level in levels]))
 
     # Create a meshgrid for contour plotting
@@ -180,9 +183,14 @@ def plot_results(samples):
     plt.xlim(-125, 125)
     plt.ylim(1.5, 3.1)
     plt.title("2D Histogram with Contours and Density Shading")
+    if part == 'a':
+        str = 'Using correct data uncertainties'
+    else:
+        str = 'Using data uncertainties / 2'
+    plt.text(0.5, 0.9, str, transform=plt.gca().transAxes, fontsize=12, ha='center', va='center', bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="white"))
     plt.colorbar(label="Normalized Density")
-    plt.savefig('Exercise6_histogram.png', bbox_inches='tight')
-    plt.savefig('Exercise6_histogram.pdf', bbox_inches='tight')
+    plt.savefig(f'Exercise9_{part}_histogram.png', bbox_inches='tight')
+    plt.savefig(f'Exercise9_{part}_histogram.pdf', bbox_inches='tight')
     plt.show()
     return samples
 
@@ -201,7 +209,7 @@ def plot_chains(sampler):
     plt.show()
 
 
-def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
+def plot_fit_with_samples(x, y, sigy, part, samples, n_samples_to_plot=10):
     """
     Plot the data with error bars, best-fit line, and sample lines from MCMC.
     """
@@ -226,54 +234,30 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
     plt.ylabel("y")
     plt.title("Line fit with MCMC uncertainty")
     plt.legend()
-    plt.savefig('Exercise6_fit.png', bbox_inches='tight')
-    plt.savefig('Exercise6_fit.pdf', bbox_inches='tight')
+    plt.savefig(f'Exercise9_{part}_fit.png', bbox_inches='tight')
+    plt.savefig(f'Exercise9_{part}_fit.pdf', bbox_inches='tight')
     plt.show()
 
 
 
-def main():
-    # Run the MCMC simulation
-
+def run_calculation(x, y, sigy, part):
     sampler = run_mcmc(x, y, sigy)
-
     samples = sampler.get_chain(flat=True)
 
-    # Plot the results
-    
-    # Plot the results
-    plot_results(samples)
-    # import sys
-    # sys.exit()
-
-    # Print the results
-    print("Mean of m:", np.mean(samples[:, 0]))
-    print("Mean of b:", np.mean(samples[:, 1]))
-    print("Mean of Pb:", np.mean(samples[:, 2]))
-    print("Mean of Yb:", np.mean(samples[:, 3]))
-    print("Mean of Vb:", np.mean(samples[:, 4]))
-
-    print()
-
-    print("Median of m:", np.median(samples[:, 0]))
-    print("Median of b:", np.median(samples[:, 1]))
-    print("Median of Pb:", np.median(samples[:, 2]))
-    print("Median of Yb:", np.median(samples[:, 3]))
-    print("Median of Vb:", np.median(samples[:, 4]))
-
-    print()
-
-
-    # import sys
-    # sys.exit()
+    plot_results(part, samples)
 
     import corner
     Vb = samples[:, 4]
-    mark = 10
-    # mask = np.logical_and(Vb > np.percentile(Vb, mark), Vb < np.percentile(Vb, 100 - mark))
 
-    lower, upper = np.percentile(Vb, [0, 100 - mark])
-    # ranges = [None, None, None, None, (lower, upper)]
+    if part == 'a':
+        lower, upper = 0, 200
+        
+    else:
+        mark = 10
+
+        lower, upper = np.percentile(Vb, [0, 100 - mark])
+        
+
     ranges = [
     (np.min(samples[:, 0]), np.max(samples[:, 0])),  # m
     (np.min(samples[:, 1]), np.max(samples[:, 1])),  # b
@@ -282,17 +266,21 @@ def main():
     (lower, upper)                                   # Vb
     ]
 
-
-    # corner.corner(samples, labels=["m", "b"], truths=[m, c], bins=50, smooth=1.0, show_titles=True)
-    # corner.corner(samples[mask], labels=["m", "b", "Pb", "Yb", "Vb"], quantiles=[0.16, 0.5, 0.84], bins=250, fig=plt.figure(figsize=(12, 7)))
     corner.corner(samples, labels=["m", "b", "Pb", "Yb", "Vb"], range=ranges, quantiles=[0.16, 0.5, 0.84], bins=250, fig=plt.figure(figsize=(12, 7)), show_titles=True)
-    plt.savefig('Exercise6_corner.png', bbox_inches='tight')
-    plt.savefig('Exercise6_corner.pdf', bbox_inches='tight')
+    plt.savefig(f'Exercise9_{part}_corner.png', bbox_inches='tight')
+    plt.savefig(f'Exercise9_{part}_corner.pdf', bbox_inches='tight')
     plt.show()
 
-    plot_chains(sampler)
-    plot_fit_with_samples(x, y, sigy, samples)
+    # print("Exiting the program...")
+    # import sys
+    # sys.exit()
 
+    plot_chains(sampler)
+    plot_fit_with_samples(x, y, sigy, part, samples)
+
+def main():
+    run_calculation(x, y, sigy, "a")
+    run_calculation(x, y, sigy / 2, "b")
 
 
 if __name__ == "__main__":
