@@ -151,8 +151,8 @@ def plot_results(samples):
 
     H, xedges, yedges = np.histogram2d(samples[:,1], samples[:,0], bins=500)
     i,j = np.unravel_index(np.argmax(H), H.shape)
-    m_map = 0.5*(xedges[i]+xedges[i+1])
-    b_map = 0.5*(yedges[j]+yedges[j+1])
+    b_map = 0.5*(xedges[i]+xedges[i+1])
+    m_map = 0.5*(yedges[j]+yedges[j+1])
 
     print("MAP of m:", m_map)
     print("MAP of b:", b_map)
