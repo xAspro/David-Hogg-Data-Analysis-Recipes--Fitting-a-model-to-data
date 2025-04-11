@@ -21,12 +21,6 @@ sigx = np.array([9, 4, 11, 7, 5, 9, 4, 4, 11, 7, 5, 5, 5, 6, 6, 5, 9, 8, 6, 5])
 rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, -0.69, 0.30, -0.46, -0.03, 0.50, 0.73, -0.52, 0.90, 0.40, -0.78, -0.56])
 
 
-
-# id = id.reshape(-1, 1)
-# x = x.reshape(-1, 1)
-# y = y.reshape(-1, 1)
-# sigy = sigy
-
 def logprior(params):
     m, b, Pb, Yb, Vb = params
     if 0 <= Pb <= 1 and Vb > 0:
@@ -78,14 +72,7 @@ def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
     # m, b, Pb, Yb, Vb
     ndim = 5
 
-    # Define the initial positions of the walkers
-    # p0 = np.random.rand(nwalkers, ndim)
     p0 = np.empty((nwalkers, 5))
-    # p0[:, 0] = np.random.uniform(0, 10, size=nwalkers)   # m
-    # p0[:, 1] = np.random.uniform(-100, 100, size=nwalkers) # b
-    # p0[:, 2] = np.random.uniform(0, 1, size=nwalkers)    # Pb
-    # p0[:, 3] = np.random.uniform(-100, 100, size=nwalkers) # Yb
-    # p0[:, 4] = np.random.uniform(0, 10, size=nwalkers)   # Vb
 
     p0[:, 0] = np.random.uniform(0, 2, size=nwalkers)   # m
     p0[:, 1] = np.random.uniform(0, 200, size=nwalkers) # b
@@ -97,8 +84,6 @@ def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=(xi, yi, sigyi))
 
     # Run the MCMC simulation
-    # sampler.run_mcmc(p0, nsteps)
-
     sampler.run_mcmc(p0, nsteps_burn, progress=True)
     sampler.reset()  # clear burn-in
 
@@ -107,20 +92,97 @@ def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
 
     return sampler
 
+################################################################################################################################################
+# Marginalisation is not required. Because even histogram is compressing the joint probability distribution into just the required parameters.
+################################################################################################################################################
+
+# def marginalisation(samples, params_to_marginalise=[2, 3, 4], target_params=[0, 1], n_bins=100):
+#     """
+#     Marginalise the samples over the specified parameters and calculate the MAP value for the target parameters.
+#     """
+#     # Check if params_to_marginalise is a list or a single parameter
+#     if not isinstance(params_to_marginalise, list):
+#         params_to_marginalise = [params_to_marginalise]
+
+#     # Marginalize over the specified parameters (sum over them)
+#     marginalised_samples = np.sum(samples[:, params_to_marginalise], axis=1)
+
+#     # Create a new array with the remaining parameters (target_params)
+#     reduced_samples = samples[:, target_params]
+
+#     # Create a histogram of the reduced samples
+#     hist, edges = np.histogram(reduced_samples[:, 0], bins=n_bins, density=True)
+
+#     # Calculate the bin centers
+#     bin_centers = 0.5 * (edges[1:] + edges[:-1])
+
+#     # Normalize the histogram
+#     hist /= np.sum(hist)
+
+#     # Find the MAP value (bin center with the highest density)
+#     map_index = np.argmax(hist)  # Index of the maximum value in the histogram
+#     map_value = bin_centers[map_index]  # Corresponding bin center
+
+#     return bin_centers, hist, map_value
+
+# def plot_marginalisation(samples, params_to_marginalise=[2,3,4], target_params=[0,1], n_bins=100):
+#     """
+#     Plot the marginalisation of the samples over the specified parameters.
+#     """
+#     bin_centers, hist, map_value = marginalisation(samples, params_to_marginalise, target_params, n_bins)
+
+
+#     print(f"MAP value for target parameter {target_params}: {map_value}")
+#     print()
+    
+#     plt.figure(figsize=(8, 5))
+#     plt.plot(bin_centers, hist, label=f"Marginalisation over parameter {params_to_marginalise}")
+#     plt.axvline(map_value, color='red', linestyle='--', label=f"MAP = {map_value:.2f}")
+#     plt.xlabel(f"Parameter {params_to_marginalise}")
+#     plt.ylabel("Density")
+#     plt.title(f"Marginalisation of Parameter {params_to_marginalise}")
+#     plt.legend()
+#     plt.show()
+
 def plot_results(samples):
     """
     Plot the results of the MCMC simulation.
     """
-    # Plot the results
-    plt.figure(figsize=(10, 6))
-    plt.plot(samples[:, 1], samples[:, 0], 'k.', markersize=1)
-    plt.xlabel('b')
-    plt.ylabel('m')
-    plt.title('MCMC Results')
-    plt.savefig('Exercise6.png', bbox_inches='tight')
-    plt.savefig('Exercise6.pdf', bbox_inches='tight')
+
+    H, xedges, yedges = np.histogram2d(samples[:,1], samples[:,0], bins=500)
+    i,j = np.unravel_index(np.argmax(H), H.shape)
+    m_map = 0.5*(xedges[i]+xedges[i+1])
+    b_map = 0.5*(yedges[j]+yedges[j+1])
+
+    print("MAP of m:", m_map)
+    print("MAP of b:", b_map)
+    print()
+
+    H_normalized = H / np.max(H)
+    plt.pcolormesh(xedges, yedges, H_normalized.T, cmap="Greys")
+
+    H_flat = H.flatten()
+    H_sorted = np.sort(H_flat)
+    cumsum = np.cumsum(H_sorted)
+    cumsum /= cumsum[-1]  # Normalize to [0, 1]
+
+    # Define percentiles (e.g., 68%, 95%, 99%)
+    levels = [0.25, 0.5, 0.75]
+    contour_levels = sorted(set([H_sorted[np.searchsorted(cumsum, level)] for level in levels]))
+
+    # Create a meshgrid for contour plotting
+    X, Y = np.meshgrid(xedges[:-1], yedges[:-1])
+    plt.contour(X, Y, H.T, levels=contour_levels, colors="black")
+
+    # Add labels and title
+    plt.xlabel("b")
+    plt.ylabel("m")
     plt.xlim(-125, 125)
     plt.ylim(1.5, 3.1)
+    plt.title("2D Histogram with Contours and Density Shading")
+    plt.colorbar(label="Normalized Density")
+    plt.savefig('Exercise6_histogram.png', bbox_inches='tight')
+    plt.savefig('Exercise6_histogram.pdf', bbox_inches='tight')
     plt.show()
     return samples
 
@@ -129,10 +191,6 @@ def plot_results(samples):
 def plot_chains(sampler):
     fig, axes = plt.subplots(5, figsize=(8, 5), sharex=True)
     samples = sampler.get_chain()
-
-    print("Shape:", samples.shape)  # Shape of the array
-    print("Data type:", samples.dtype)  # Data type of the elements
-    print("Number of dimensions:", samples.ndim)  # Number of dimensions
 
     labels = ["m", "b", "Pb", "Yb", "Vb"]
     for i in range(5):  # For each parameter
@@ -205,15 +263,9 @@ def main():
 
     print()
 
-    H, xedges, yedges = np.histogram2d(samples[:,0], samples[:,1], bins=50)
-    i,j = np.unravel_index(np.argmax(H), H.shape)
-    m_map = 0.5*(xedges[i]+xedges[i+1])
-    b_map = 0.5*(yedges[j]+yedges[j+1])
 
-    print("MAP of m:", m_map)
-    print("MAP of b:", b_map)
-    print()
-
+    # import sys
+    # sys.exit()
 
     import corner
     Vb = samples[:, 4]
