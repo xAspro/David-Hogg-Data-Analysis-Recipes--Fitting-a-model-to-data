@@ -1,9 +1,9 @@
-"""
-Reproducing the Figure 4 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
+# """
+# Reproducing the Figure 4 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Considering all the data points for a linear fit
+# Considering all the data points for a linear fit
 
-"""
+# """
 
 
 
