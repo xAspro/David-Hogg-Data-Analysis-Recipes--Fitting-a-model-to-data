@@ -66,13 +66,13 @@ def plot():
     plt.title('Chi-squared statistic vs S')
     plt.legend()
     plt.grid()
-    plt.savefig('chi_squared_vs_S.png', dpi=300)
-    plt.savefig('chi_squared_vs_S.pdf', dpi=300)
+    plt.savefig('Exercise11_chi_squared_vs_S.png', dpi=300)
+    plt.savefig('Exercise11_chi_squared_vs_S.pdf', dpi=300)
 
     plt.xlim(900, 1000)
     plt.ylim(12, 16)
-    plt.savefig('chi_squared_vs_S_zoomed.png', dpi=300)
-    plt.savefig('chi_squared_vs_S_zoomed.pdf', dpi=300)
+    plt.savefig('Exercise11_chi_squared_vs_S_zoomed.png', dpi=300)
+    plt.savefig('Exercise11_chi_squared_vs_S_zoomed.pdf', dpi=300)
     plt.show()
 
 
