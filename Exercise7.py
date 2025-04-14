@@ -38,22 +38,12 @@ def loglikelihood(params, xi, yi, sigyi):
     """
     # Unpack the parameters
     m, b, Pb, Yb, Vb = params
-    # Check if Pb is between 0 and 1
     if Pb < 0 or Pb > 1:
-        # print("Pb is not between 0 and 1")
         return -np.inf
-        # return 0
-    # Check if Vb is positive
     if Vb <= 0:
-        # print("Vb is not positive")
         return -np.inf
-        # return 0
-    # Check if sigyi is positive
     if np.any(sigyi <= 0):
-        print("sigyi is not positive")
         return -np.inf
-        # return 0
-    # Calculate the likelihood
     return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
 
 def logposterior(params, xi, yi, sigyi):
@@ -68,8 +58,7 @@ def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
     """
     Run the MCMC simulation using emcee.
     """
-    # Define the number of dimensions
-    # m, b, Pb, Yb, Vb
+
     ndim = 5
 
     p0 = np.empty((nwalkers, 5))
@@ -103,8 +92,6 @@ def plot_results(samples, question_part):
     # Add labels and title
     plt.xlabel("Pb")
     plt.ylabel("Marginalised Posterior Distribution Function")
-    # plt.xlim(0, 1)
-    # plt.ylim(0, 4)
     plt.title("Marginalised Posterior Distribution Function of Pb")
     if question_part == 'a':
         str = 'Using correct data uncertainities'
@@ -155,8 +142,6 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
     plt.ylabel("y")
     plt.title("Line fit with MCMC uncertainty")
     plt.legend()
-    # plt.savefig('Exercise6_fit.png', bbox_inches='tight')
-    # plt.savefig('Exercise6_fit.pdf', bbox_inches='tight')
     plt.show()
 
 
@@ -182,29 +167,7 @@ def main():
     plt.savefig('Exercise7.png', bbox_inches='tight')
     plt.savefig('Exercise7.pdf', bbox_inches='tight')
     plt.show()
-    # import sys
-    # sys.exit()
-
-    # # Print the results
-    # print("Mean of m:", np.mean(samples[:, 0]))
-    # print("Mean of b:", np.mean(samples[:, 1]))
-    # print("Mean of Pb:", np.mean(samples[:, 2]))
-    # print("Mean of Yb:", np.mean(samples[:, 3]))
-    # print("Mean of Vb:", np.mean(samples[:, 4]))
-
-    # print()
-
-    # print("Median of m:", np.median(samples[:, 0]))
-    # print("Median of b:", np.median(samples[:, 1]))
-    # print("Median of Pb:", np.median(samples[:, 2]))
-    # print("Median of Yb:", np.median(samples[:, 3]))
-    # print("Median of Vb:", np.median(samples[:, 4]))
-
-    # print()
-
-
-    # import sys
-    # sys.exit()
+    
 
     import corner
     Vb = samples[:, 4]
