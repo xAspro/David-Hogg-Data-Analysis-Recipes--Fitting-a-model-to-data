@@ -203,11 +203,19 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
         y_sample = m * x_plot + b
         plt.plot(x_plot, y_sample, color='gray', alpha=0.1)
 
-    # Plot the best-fit line (mean or MAP)
-    m_best = np.mean(samples[:, 0])  # or use MAP
-    b_best = np.mean(samples[:, 1])
-    y_best = m_best * x_plot + b_best
-    plt.plot(x_plot, y_best, color='blue', label='Best Fit (Mean)')
+    # # Plot the best-fit line (mean or MAP)
+    # m_best = np.mean(samples[:, 0])  # or use MAP
+    # b_best = np.mean(samples[:, 1])
+    # y_best = m_best * x_plot + b_best
+
+    # Plot the best-fit line (MAP)
+    H, xedges, yedges = np.histogram2d(samples[:,1], samples[:,0], bins=500)
+    i,j = np.unravel_index(np.argmax(H), H.shape)
+    b_map = 0.5*(xedges[i]+xedges[i+1])
+    m_map = 0.5*(yedges[j]+yedges[j+1])
+    y_best = m_map * x_plot + b_map
+
+    plt.plot(x_plot, y_best, color='blue', label='Best Fit (MAP)')
 
     # Labels and legend
     plt.xlabel("x")
