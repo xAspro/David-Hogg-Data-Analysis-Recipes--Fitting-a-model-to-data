@@ -38,22 +38,10 @@ def loglikelihood(params, xi, yi, sigyi):
     """
     # Unpack the parameters
     m, b, Pb, Yb, Vb = params
-    # Check if Pb is between 0 and 1
     if Pb < 0 or Pb > 1:
-        # print("Pb is not between 0 and 1")
         return -np.inf
-        # return 0
-    # Check if Vb is positive
     if Vb <= 0:
-        # print("Vb is not positive")
         return -np.inf
-        # return 0
-    # Check if sigyi is positive
-    if np.any(sigyi <= 0):
-        print("sigyi is not positive")
-        return -np.inf
-        # return 0
-    # Calculate the likelihood
     return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
 
 def logposterior(params, xi, yi, sigyi):
