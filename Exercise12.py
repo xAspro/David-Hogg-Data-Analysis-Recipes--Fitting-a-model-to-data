@@ -23,7 +23,6 @@ y = y[4:]
 def logprior(params):
     m, b, sigyi2 = params
     if 0 <= m <= 5 and -200 <= b <= 200 and 0 < sigyi2:
-        # return - np.log(1 + sigyi2)
         return 0
     return -np.inf
 
@@ -47,7 +46,7 @@ def logposterior(params, xi, yi):
     
     return lp + ll
 
-def run_mcmc(x, y, sigy, nwalkers=800, n_burn=200, n_prod=500):
+def run_mcmc(x, y, nwalkers=800, n_burn=200, n_prod=500):
     # Set up the initial position of the walkers
     p0 = np.random.rand(nwalkers, 3)
     p0[:, 0] = np.random.uniform(0, 5, nwalkers)  # m
@@ -63,6 +62,13 @@ def run_mcmc(x, y, sigy, nwalkers=800, n_burn=200, n_prod=500):
     # Reset the sampler and run the production phase
     sampler.reset()
     sampler.run_mcmc(None, n_prod, progress=True)
+
+    # Print the maximum likelihood value for each parameter
+    max_likelihood_params = sampler.flatchain[np.argmax(sampler.flatlnprobability)]
+    print("Maximum Likelihood Parameters:")
+    print(f"m = {max_likelihood_params[0]:.2f}")
+    print(f"b = {max_likelihood_params[1]:.2f}")
+    print(f"sigyi = {np.sqrt(max_likelihood_params[2]):.2f}")
 
     return sampler
 
@@ -138,7 +144,7 @@ def plot_results(sampler, x, y):
 
 def main():
     # Run MCMC
-    sampler = run_mcmc(x, y, sigx)
+    sampler = run_mcmc(x, y)
 
     # Plot results
     plot_results(sampler, x, y)
