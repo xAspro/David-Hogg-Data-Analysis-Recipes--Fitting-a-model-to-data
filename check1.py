@@ -49,7 +49,7 @@ def make_data(n_data_points, m, b, xmin, xmax, n_segments, sigy_min, sigy_max):
     y = m * x + b
     y += np.random.normal(0, sigyi, size=x.shape)
 
-    plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename='check1_orignal_data.png')
+    plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename='check1_orignal_data')
     return x, y, m, b, sigy, segments
 
 def logprior(params):
@@ -168,8 +168,8 @@ def plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename=None):
         prev_end = xmin - 0.1 * x_dif if i == 0 else (segment[0] + segments[i-1][-1]) / 2
         next_start = xmax + 0.1 * x_dif if i == len(segments) - 1 else (segment[-1] + segments[i+1][0]) / 2
 
-        print(f"prev_end = {prev_end}")
-        print(f"next_start = {next_start}\n")
+        # print(f"prev_end = {prev_end}")
+        # print(f"next_start = {next_start}\n")
 
         # Create a mask for the smoothed range
         mask = (X >= prev_end) & (X <= next_start)
@@ -205,14 +205,15 @@ def plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename=None):
     plt.title('Gaussian Function with Uncertainty for Each Segment')
     plt.legend()
     if filename:
-        plt.savefig(filename, bbox_inches='tight')
+        plt.savefig(filename + ".pdf", bbox_inches='tight')
+        plt.savefig(filename + ".png", bbox_inches='tight')
     plt.show()
 
 
 # make_data(19, 2, 3, 1, 10, 5, 1, 10)
 
-x, y, m, b, sigy, segments = make_data(99, 2, 3, 1, 10, 3, 1, 4)
-# make_data(99, 2, 3, 1, 10, 5, 1, 5)
+# x, y, m, b, sigy, segments = make_data(9999, 2, 3, 1, 10, 7, 1, 4)
+x, y, m, b, sigy, segments = make_data(99, 2, 3, 1, 10, 5, 1, 5)
 sampler = run_mcmc(x, y, segments)
 
 samples = sampler.get_chain(flat=True)
@@ -245,15 +246,15 @@ for i, param in enumerate(param_names):
 
 # Plot the results
 labels = ["m", "b"] + [f"sigyi2_{i+1}" for i in range(len(segments))]
-fig = plt.figure(figsize=(8, 8), dpi=100, tight_layout=True)
-corner.corner(samples, labels=labels, fig=fig, show_titles=True, bins=30)
-plt.savefig('check1_part_1.png', bbox_inches='tight')
-plt.savefig('check1_part_1.pdf', bbox_inches='tight')
-plt.show()
+# fig = plt.figure(figsize=(8, 8), dpi=100, tight_layout=True)
+# corner.corner(samples, labels=labels, fig=fig, show_titles=True, bins=30)
+# plt.savefig('check1_part_1.png', bbox_inches='tight')
+# plt.savefig('check1_part_1.pdf', bbox_inches='tight')
+# plt.show()
 
 # Extract the best-fit parameters (mean of the posterior samples)
 best_fit_params = np.mean(samples, axis=0)
 m_fit, b_fit = best_fit_params[:2]
 
 # Plot the data with the currently estimated line
-plot_data(x, y, m_fit, b_fit, xmin=1, xmax=10, sigy=sigy, segments=segments, filename='check1_guessed_soln.png')
+plot_data(x, y, m_fit, b_fit, xmin=1, xmax=10, sigy=sigy, segments=segments, filename='check1_guessed_soln')
