@@ -129,7 +129,7 @@ def logposterior_segments(params, NUM, xi, yi, segments):
     return lp + ll
 
 
-def run_mcmc(x, y, NUM, segments, nwalkers=2000, n_burn=500, n_prod=600):
+def run_mcmc(x, y, NUM, segments, nwalkers=200, n_burn=500, n_prod=600):
     """
     Run MCMC to fit the data.
     """
@@ -159,8 +159,8 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None, log_s
 
     # Create a 2D color plot for the Gaussian function with uncertainty for each segment
     X, Y = np.meshgrid(
-        np.logspace(np.log10(xmin) - 0.25 * np.log10(x_dif), np.log10(xmax) + 0.25 * np.log10(x_dif), 500) if log_scale else np.linspace(xmin - 0.1 * x_dif, xmax + 0.1 * x_dif, 500),
-        np.logspace(np.log10(np.min(y)) - 0.25 * np.log10(y_dif), np.log10(np.max(y)) + 0.25 * np.log10(y_dif), 500) if log_scale else np.linspace(np.min(y) - 0.1 * y_dif, np.max(y) + 0.1 * y_dif, 500)
+        np.linspace(xmin - 0.1 * x_dif, xmax + 0.1 * x_dif, 500),
+        np.logspace(np.log10(np.min(y)) / (0.25 * np.log10(y_dif)), np.log10(np.max(y)) * (0.25 * np.log10(y_dif)), 500) if log_scale else np.linspace(np.min(y) - 0.1 * y_dif, np.max(y) + 0.1 * y_dif, 500)
     )
 
     # Check for NaN values in X or Y
@@ -190,6 +190,9 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None, log_s
         prev_end = xmin - 0.1 * x_dif if i == 0 else (segment[0] + segments[i-1][-1]) / 2
         next_start = xmax + 0.1 * x_dif if i == len(segments) - 1 else (segment[-1] + segments[i+1][0]) / 2
 
+        print(f'prev_end = {prev_end}, next_start = {next_start}')
+        print(f'segment: i = {i + 1}')
+
         mask = (X >= prev_end) & (X <= next_start)
         Z[mask] += np.exp(-0.5 * ((Y[mask] - function(X[mask], parameters)) / sigy[i])**2)
 
@@ -205,7 +208,7 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None, log_s
     # Plot the color map
     plt.figure(figsize=(8, 6))
     if log_scale:
-        contourf = plt.contourf(X, Y, Z, levels=100, cmap='viridis', alpha=0.8, norm=LogNorm())
+        contourf = plt.contourf(X, Y, Z, levels=100, cmap='viridis', alpha=0.8)
     else:
         contourf = plt.contourf(X, Y, Z, levels=100, cmap='viridis', alpha=0.8)
     plt.colorbar(contourf, label='Gaussian Value')
@@ -216,8 +219,9 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None, log_s
     plt.clabel(contours, inline=True, fontsize=6, fmt={0.1: '10%', 0.5: '50%', 0.9: '90%'})
 
     if log_scale:
-        plt.loglog(x, y, 'o', c='red', label='Data Points', markeredgecolor='black')
-        plt.loglog(x_arr, function(x_arr, parameters), color='black', label='Original Line')
+        plt.plot(x, y, 'o', c='red', label='Data Points', markeredgecolor='black')
+        plt.plot(x_arr, function(x_arr, parameters), color='black', label='Original Line')
+        plt.yscale('log')  # Set y-axis to logarithmic scale
     else:
         plt.scatter(x, y, c='red', label='Data Points', edgecolor='black')
         plt.plot(x_arr, function(x_arr, parameters), color='black', label='Original Line')
@@ -239,7 +243,8 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None, log_s
 
 # x, y, m, b, sigy, segments = make_data(9999, 2, 3, 1, 10, 7, 1, 4)
 
-parameters = (2, 3, 100)
+# parameters = (2, 3, 100)
+parameters = [2, 0, 0, 0, 1000]
 log_scale = False
 log_scale = True
 
