@@ -6,6 +6,7 @@ In this code, initially, I will try to look at the change with sigy in segments.
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import emcee
 import corner
 
@@ -17,7 +18,7 @@ def function(x, parameters):
     return np.polyval(parameters, x)
 
 
-def make_data(n_data_points, xmin, xmax, n_segments, sigy_min, sigy_max, parameters):
+def make_data(n_data_points, xmin, xmax, n_segments, sigy_min, sigy_max, parameters, log_scale=False):
     """
     Create data with a linear model and add noise.
     """
@@ -53,7 +54,7 @@ def make_data(n_data_points, xmin, xmax, n_segments, sigy_min, sigy_max, paramet
     y = function(x, parameters)
     y += np.random.normal(0, sigyi, size=x.shape)
 
-    plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename='check1_orignal_data')
+    plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename='check1_orignal_data', log_scale=log_scale)
     return x, y, sigy, segments, NUM
 
 def logprior(params, NUM):
@@ -150,34 +151,45 @@ def run_mcmc(x, y, NUM, segments, nwalkers=2000, n_burn=500, n_prod=600):
 
     return sampler
 
-def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
+def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None, log_scale=False):
     
 
     x_dif = xmax - xmin
     y_dif = np.max(y) - np.min(y)
 
     # Create a 2D color plot for the Gaussian function with uncertainty for each segment
-    X, Y = np.meshgrid(np.linspace(xmin - 0.1 * x_dif, xmax + 0.1 * x_dif, 500), np.linspace(np.min(y) - 0.1 * y_dif, np.max(y) + 0.1 * y_dif, 500))
+    X, Y = np.meshgrid(
+        np.logspace(np.log10(xmin) - 0.25 * np.log10(x_dif), np.log10(xmax) + 0.25 * np.log10(x_dif), 500) if log_scale else np.linspace(xmin - 0.1 * x_dif, xmax + 0.1 * x_dif, 500),
+        np.logspace(np.log10(np.min(y)) - 0.25 * np.log10(y_dif), np.log10(np.max(y)) + 0.25 * np.log10(y_dif), 500) if log_scale else np.linspace(np.min(y) - 0.1 * y_dif, np.max(y) + 0.1 * y_dif, 500)
+    )
+
+    # Check for NaN values in X or Y
+    if np.isnan(X).any():
+        print()
+        print()
+        print()
+        print()
+        print("X contains NaN values.")
+        print()
+        print()
+        print()
+    if np.isnan(Y).any():
+        print()
+        print()
+        print()
+        print()
+        print("Y contains NaN values.")
+        print()
+        print()
+        print()
     Z = np.zeros_like(X)
+
 
     # Calculate Gaussian deviation for each segment
     for i, segment in enumerate(segments):
-        # print(f"Segment {i+1}: {segment}")
-        # print(f"sigy[i] = {sigy[i]}")
-        # print('segment[0] =', segment[0])
-        # print('segment[-1] =', segment[-1])
-        # Calculate the midpoint between the current segment and the previous/next segment
-        # prev_end = segment[0] if i == 0 else (segment[0] + segments[i-1][-1]) / 2
-        # next_start = segment[-1] if i == len(segments) - 1 else (segment[-1] + segments[i+1][0]) / 2
-
-
         prev_end = xmin - 0.1 * x_dif if i == 0 else (segment[0] + segments[i-1][-1]) / 2
         next_start = xmax + 0.1 * x_dif if i == len(segments) - 1 else (segment[-1] + segments[i+1][0]) / 2
 
-        # print(f"prev_end = {prev_end}")
-        # print(f"next_start = {next_start}\n")
-
-        # Create a mask for the smoothed range
         mask = (X >= prev_end) & (X <= next_start)
         Z[mask] += np.exp(-0.5 * ((Y[mask] - function(X[mask], parameters)) / sigy[i])**2)
 
@@ -192,24 +204,31 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
 
     # Plot the color map
     plt.figure(figsize=(8, 6))
-    contourf = plt.contourf(X, Y, Z, levels=100, cmap='viridis', alpha=0.8)
+    if log_scale:
+        contourf = plt.contourf(X, Y, Z, levels=100, cmap='viridis', alpha=0.8, norm=LogNorm())
+    else:
+        contourf = plt.contourf(X, Y, Z, levels=100, cmap='viridis', alpha=0.8)
     plt.colorbar(contourf, label='Gaussian Value')
+
 
     # Add contours for specific levels
     contours = plt.contour(X, Y, Z, levels=contour_levels, colors=['red', 'blue', 'white'], linewidths=1.5)
     plt.clabel(contours, inline=True, fontsize=6, fmt={0.1: '10%', 0.5: '50%', 0.9: '90%'})
 
+    if log_scale:
+        plt.loglog(x, y, 'o', c='red', label='Data Points', markeredgecolor='black')
+        plt.loglog(x_arr, function(x_arr, parameters), color='black', label='Original Line')
+    else:
+        plt.scatter(x, y, c='red', label='Data Points', edgecolor='black')
+        plt.plot(x_arr, function(x_arr, parameters), color='black', label='Original Line')
 
 
-
-    # contour = plt.contourf(X, Y, Z, levels=100, cmap='viridis', alpha=0.8)
-    # plt.colorbar(contour, label='Gaussian Value')
-    plt.scatter(x, y, c='red', label='Data Points', edgecolor='black')
-    plt.plot(x_arr, function(x_arr, parameters), color='black', label='Original Line')
     plt.xlabel('X')
     plt.ylabel('Y')
     plt.title('Gaussian Function with Uncertainty for Each Segment')
     plt.legend()
+    if log_scale:
+        filename = filename + "_log"
     if filename:
         plt.savefig(filename + ".pdf", bbox_inches='tight')
         plt.savefig(filename + ".png", bbox_inches='tight')
@@ -221,8 +240,10 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
 # x, y, m, b, sigy, segments = make_data(9999, 2, 3, 1, 10, 7, 1, 4)
 
 parameters = (2, 3, 100)
+log_scale = False
+log_scale = True
 
-x, y, sigy, segments, NUM = make_data(999, 1, 10, 5, 1, 5, parameters)
+x, y, sigy, segments, NUM = make_data(999, 1, 10, 5, 1, 50, parameters, log_scale=log_scale)
 
 sampler = run_mcmc(x, y, NUM, segments)
 
@@ -284,4 +305,4 @@ best_fit_params = np.mean(samples, axis=0)
 parameters_fit = best_fit_params[:NUM]
 
 # Plot the data with the currently estimated line
-plot_data(x, y, parameters_fit, xmin=1, xmax=10, sigy=sigy, segments=segments, filename='check1_guessed_soln')
+plot_data(x, y, parameters_fit, xmin=1, xmax=10, sigy=sigy, segments=segments, filename='check1_guessed_soln', log_scale=log_scale)
