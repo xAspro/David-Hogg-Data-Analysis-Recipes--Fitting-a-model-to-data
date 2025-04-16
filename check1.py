@@ -8,17 +8,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import emcee
 import corner
-from mpl_toolkits.mplot3d import Axes3D
-
-# np.set_printoptions(threshold=np.inf)
-np.set_printoptions()  # Resets all options to default
 
 
-def make_data(n_data_points, m, b, xmin, xmax, n_segments, sigy_min, sigy_max):
+def function(x, parameters):
+    """
+    Polynomial function in x.
+    """
+    return np.polyval(parameters, x)
+
+
+def make_data(n_data_points, xmin, xmax, n_segments, sigy_min, sigy_max, parameters):
     """
     Create data with a linear model and add noise.
     """
     x = np.linspace(xmin, xmax, n_data_points)
+    NUM = len(parameters)
 
     random_indices = np.sort(np.random.choice(len(x) - 1, n_segments - 1, replace=False))
 
@@ -46,21 +50,24 @@ def make_data(n_data_points, m, b, xmin, xmax, n_segments, sigy_min, sigy_max):
     #         cnt += 1
     #     print()
 
-    y = m * x + b
+    y = function(x, parameters)
     y += np.random.normal(0, sigyi, size=x.shape)
 
-    plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename='check1_orignal_data')
-    return x, y, m, b, sigy, segments
+    plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename='check1_orignal_data')
+    return x, y, sigy, segments, NUM
 
-def logprior(params):
+def logprior(params, NUM):
     """
     Calculate the log prior probability of the parameters.
     """
-    m, b = params[:2]
-    sigyi2 = params[2:]
+    parameters = params[:NUM]
+    sigyi2 = params[NUM:]
 
-    # Uniform prior for m and b
-    if not (-100 < m < 100 and -2000 < b < 2000):
+    # # Uniform prior for m and b
+    # if not (-100 < m < 100 and -2000 < b < 2000):
+    #     return -np.inf
+
+    if not np.all((-10000 < parameters) & (parameters < 10000)):
         return -np.inf
 
     # Uniform prior for sigyi2
@@ -69,32 +76,32 @@ def logprior(params):
 
     return 0.0
 
-def loglikelihood(params, xi, yi):
+def loglikelihood(params, NUM, xi, yi):
     """
     Calculate the log likelihood of the data given the model parameters and noise parameters.
     """
     # Unpack the parameters
-    m, b = params[:2]
-    sigyi2 = params[2:]
+    parameters = params[:NUM]
+    sigyi2 = params[NUM:]
 
     if len(sigyi2) != len(xi):
         import time
         time.sleep(2)
         raise ValueError("Length of sigyi2 must match length of xi")
 
-    return np.sum(-0.5 * (((yi - (m * xi + b))**2 / sigyi2) + np.log(2 * np.pi * sigyi2)))
+    return np.sum(-0.5 * (((yi - (function(x, parameters)))**2 / sigyi2) + np.log(2 * np.pi * sigyi2)))
 
-def logposterior_segments(params, xi, yi, segments):
+def logposterior_segments(params, NUM, xi, yi, segments):
     """
     Calculate the log posterior probability of the parameters given the data and segments.
     """
-    lp = logprior(params)
+    lp = logprior(params, NUM)
     if not np.isfinite(lp):
         return -np.inf
 
     # Unpack the parameters
-    m, b = params[:2]
-    sigyi2 = params[2:]
+    parameters = params[:NUM]
+    sigyi2 = params[NUM:]
 
     # Check if the number of segments matches the number of sigyi2 values
     if len(sigyi2) != len(segments):
@@ -113,7 +120,7 @@ def logposterior_segments(params, xi, yi, segments):
         sigyi2_segment = sigyi2[i]
 
         # Calculate the log likelihood for the current segment
-        ll += np.sum(-0.5 * (((yi_segment - (m * segments[i] + b))**2 / sigyi2_segment) + np.log(2 * np.pi * sigyi2_segment)))
+        ll += np.sum(-0.5 * (((yi_segment - function(segments[i], parameters))**2 / sigyi2_segment) + np.log(2 * np.pi * sigyi2_segment)))
 
         # Update the lower end for the next segment
         lower_end = upper_end
@@ -121,19 +128,18 @@ def logposterior_segments(params, xi, yi, segments):
     return lp + ll
 
 
-def run_mcmc(x, y, segments, nwalkers=100, n_burn=100, n_prod=500):
+def run_mcmc(x, y, NUM, segments, nwalkers=2000, n_burn=500, n_prod=600):
     """
     Run MCMC to fit the data.
     """
     N = len(segments)
     # Set up the initial position of the walkers
-    p0 = np.random.rand(nwalkers, 2 + N)
-    p0[:, 0] = np.random.uniform(0, 5, nwalkers)  # m
-    p0[:, 1] = np.random.uniform(-200, 200, nwalkers)  # b
-    p0[:, 2:] = np.random.uniform(1, 3000, (nwalkers, N))  # sigyi2
+    p0 = np.random.rand(nwalkers, NUM + N)
+    p0[:, :NUM] = np.random.uniform(-100, 100, (nwalkers, NUM))  # m, b
+    p0[:, NUM:] = np.random.uniform(1, 3000, (nwalkers, N))  # sigyi2
 
     # Set up the MCMC sampler
-    sampler = emcee.EnsembleSampler(nwalkers, 2 + N, logposterior_segments, args=(x, y, segments))
+    sampler = emcee.EnsembleSampler(nwalkers, NUM + N, logposterior_segments, args=(NUM, x, y, segments))
 
     # Run the burn-in phase
     sampler.run_mcmc(p0, n_burn, progress=True)
@@ -144,8 +150,8 @@ def run_mcmc(x, y, segments, nwalkers=100, n_burn=100, n_prod=500):
 
     return sampler
 
-def plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename=None):
-
+def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
+    
 
     x_dif = xmax - xmin
     y_dif = np.max(y) - np.min(y)
@@ -173,7 +179,7 @@ def plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename=None):
 
         # Create a mask for the smoothed range
         mask = (X >= prev_end) & (X <= next_start)
-        Z[mask] += np.exp(-0.5 * ((Y[mask] - (m * X[mask] + b)) / sigy[i])**2)
+        Z[mask] += np.exp(-0.5 * ((Y[mask] - function(X[mask], parameters)) / sigy[i])**2)
 
     x_arr = np.unique(X)
 
@@ -199,7 +205,7 @@ def plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename=None):
     # contour = plt.contourf(X, Y, Z, levels=100, cmap='viridis', alpha=0.8)
     # plt.colorbar(contour, label='Gaussian Value')
     plt.scatter(x, y, c='red', label='Data Points', edgecolor='black')
-    plt.plot(x_arr, m * x_arr + b, color='black', label='Original Line')
+    plt.plot(x_arr, function(x_arr, parameters), color='black', label='Original Line')
     plt.xlabel('X')
     plt.ylabel('Y')
     plt.title('Gaussian Function with Uncertainty for Each Segment')
@@ -213,14 +219,22 @@ def plot_data(x, y, m, b, xmin, xmax, sigy, segments, filename=None):
 # make_data(19, 2, 3, 1, 10, 5, 1, 10)
 
 # x, y, m, b, sigy, segments = make_data(9999, 2, 3, 1, 10, 7, 1, 4)
-x, y, m, b, sigy, segments = make_data(99, 2, 3, 1, 10, 5, 1, 5)
-sampler = run_mcmc(x, y, segments)
+
+parameters = (2, 3, 100)
+
+x, y, sigy, segments, NUM = make_data(999, 1, 10, 5, 1, 5, parameters)
+
+sampler = run_mcmc(x, y, NUM, segments)
 
 samples = sampler.get_chain(flat=True)
 
 
+param_names = [f"parameter_{i+1}" for i in range(NUM)] 
+for i in range(len(param_names)):
+    print(f'parameter_{i+1} = {parameters[i]:.2f}')
+
 # Extract the samples for each parameter
-param_names = ["m", "b"] + [f"sigyi2_{i+1}" for i in range(len(segments))]
+param_names = param_names + [f"sigyi2_{i+1}" for i in range(len(segments))]
 results = {}
 
 for i, param in enumerate(param_names):
@@ -245,16 +259,29 @@ for i, param in enumerate(param_names):
     print(f"{param} = {q50:.2f} +{err_plus:.2f} -{err_minus:.2f}")
 
 # Plot the results
-labels = ["m", "b"] + [f"sigyi2_{i+1}" for i in range(len(segments))]
-# fig = plt.figure(figsize=(8, 8), dpi=100, tight_layout=True)
-# corner.corner(samples, labels=labels, fig=fig, show_titles=True, bins=30)
-# plt.savefig('check1_part_1.png', bbox_inches='tight')
-# plt.savefig('check1_part_1.pdf', bbox_inches='tight')
-# plt.show()
+labels = [f"parameter_{i+1}" for i in range(NUM)] + [f"sigyi2_{i+1}" for i in range(len(segments))]
+fig = plt.figure(figsize=(8, 8), dpi=100, tight_layout=True)
+corner.corner(samples, labels=labels, fig=fig, show_titles=True, bins=30)
+plt.savefig('check1_corner.png', bbox_inches='tight')
+plt.savefig('check1_corner.pdf', bbox_inches='tight')
+plt.show()
+
+# Plot the chains for each parameter
+fig, axes = plt.subplots(len(param_names), figsize=(10, 2 * len(param_names)), sharex=True)
+for i, param in enumerate(param_names):
+    ax = axes[i]
+    ax.plot(sampler.get_chain()[:, :, i], alpha=0.5)
+    ax.set_ylabel(param)
+    ax.set_xlabel("Step")
+    ax.set_title(f"Chain for {param}")
+plt.tight_layout()
+plt.savefig('check1_chains.png', bbox_inches='tight')
+plt.savefig('check1_chains.pdf', bbox_inches='tight')
+plt.show()
 
 # Extract the best-fit parameters (mean of the posterior samples)
 best_fit_params = np.mean(samples, axis=0)
-m_fit, b_fit = best_fit_params[:2]
+parameters_fit = best_fit_params[:NUM]
 
 # Plot the data with the currently estimated line
-plot_data(x, y, m_fit, b_fit, xmin=1, xmax=10, sigy=sigy, segments=segments, filename='check1_guessed_soln')
+plot_data(x, y, parameters_fit, xmin=1, xmax=10, sigy=sigy, segments=segments, filename='check1_guessed_soln')
