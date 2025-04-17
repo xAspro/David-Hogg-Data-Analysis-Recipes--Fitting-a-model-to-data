@@ -127,16 +127,16 @@ def logprior(params, NUM):
     min = [-14.0, -32.0, -7.0, -10.0]
     max = [-1.0, -15.0, 0.0, 15.0]
 
-    # Get the current time in milliseconds
-    import time
-    current_time = time.time()
-    milliseconds = int((current_time * 100000) % 100000)
+    # # Get the current time in milliseconds
+    # import time
+    # current_time = time.time()
+    # milliseconds = int((current_time * 100000) % 100000)
 
-    # Check if the millisecond component is exactly 0
-    if milliseconds == 0:
-        print(f"min = {min}")
-        print(f"max = {max}")
-        print(f"parameters = {parameters}")
+    # # Check if the millisecond component is exactly 0
+    # if milliseconds == 0:
+    #     print(f"min = {min}")
+    #     print(f"max = {max}")
+    #     print(f"parameters = {parameters}")
 
     if not np.all((min < parameters) & (parameters < max)):
         return -np.inf
@@ -211,7 +211,7 @@ def logposterior_segments(params, NUM, xi, yi, segments):
     return (lp + ll) / np.log10(np.e)
 
 
-def run_mcmc(x, y, NUM, segments, nwalkers=200, n_burn=10, n_prod=200):
+def run_mcmc(x, y, NUM, segments, nwalkers=2000, n_burn=10, n_prod=2000):
     """
     Run MCMC to fit the data.
     """
@@ -343,7 +343,7 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
     if filename:
         plt.savefig(filename + ".pdf", bbox_inches='tight')
         plt.savefig(filename + ".png", bbox_inches='tight')
-    plt.show()
+    plt.show(block=False)
     print(f"Plot saved as {filename}.pdf and {filename}.png")
 
 
@@ -395,12 +395,12 @@ for i, param in enumerate(param_names):
     print(f"{param} = {q50:.2f} +{err_plus:.2f} -{err_minus:.2f}")
 
 # Plot the results
-labels = [f"parameter_{i+1}" for i in range(NUM)] + [f"sigyi2_{i+1}" for i in range(len(segments))]
+labels = param_names
 fig = plt.figure(figsize=(8, 8), dpi=100, tight_layout=True)
 corner.corner(samples, labels=labels, fig=fig, show_titles=True, bins=30)
 plt.savefig('check1_corner.png', bbox_inches='tight')
 plt.savefig('check1_corner.pdf', bbox_inches='tight')
-plt.show()
+plt.show(block=False)
 print("Corner plot saved as check1_corner.png and check1_corner.pdf")
 
 # Plot the chains for each parameter
@@ -414,7 +414,7 @@ for i, param in enumerate(param_names):
 plt.tight_layout()
 plt.savefig('check1_chains.png', bbox_inches='tight')
 plt.savefig('check1_chains.pdf', bbox_inches='tight')
-plt.show()
+plt.show(block=False)
 print("Chains plot saved as check1_chains.png and check1_chains.pdf")
 
 # Extract the best-fit parameters (mean of the posterior samples)
