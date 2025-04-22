@@ -332,7 +332,7 @@ b_max = 1
 
 try:
     # x, y, sigy, b, segments, NUM = make_data(99, *xrange, 2, 1, 2, b_max, parameters)
-    x, y, sigy, b, segments, NUM = make_data(999, *xrange, 3, 0.1, 1, 1, parameters)
+    x, y, sigy, b, segments, NUM = make_data(999, *xrange, 5, 0.1, 2, 2, parameters)
     # import sys
     # sys.exit(0)
 
