@@ -110,7 +110,7 @@ def logprior(params, NUM):
 
         return -1000 - np.sum(abs(sigyi2))
     
-    if not np.all((-1 < b) & (b < 1)):
+    if not np.all((-3 < b) & (b < 3)):
         # return -np.inf
         # print(f"\nb = {b}")
         # print(f'returning -1000 - np.sum(abs(b)): {-1000 - np.sum(abs(b))}')
@@ -211,7 +211,7 @@ def run_mcmc(x, y, NUM, segments, nwalkers=50, n_burn=1, n_prod=15000):
 
     # Reset the sampler and run the production phase
     sampler.reset()
-    sampler.run_mcmc(None, n_prod)
+    sampler.run_mcmc(None, n_prod, progress=True)
 
     return sampler
 
@@ -453,36 +453,61 @@ plt.close('all')
 
 from sklearn.mixture import GaussianMixture
 
-# Select the samples for the parameter of interest
-for i in range(4):
-    param_samples = samples[:, i]  # Replace `i` with the index of the parameter
+parameters_fit = []
 
-    # Fit a Gaussian Mixture Model with 2 components
-    gmm = GaussianMixture(n_components=2)
-    gmm.fit(param_samples.reshape(-1, 1))
+# Select the samples for the parameter of interest
+for i in range(NUM):
+    param_samples = samples[:, i] 
+
+    n_components_range = range(1, 3)  
+    bics = []
+    gmm_models = []
+
+    for n_components in n_components_range:
+        gmm = GaussianMixture(n_components=n_components, random_state=42)
+        gmm.fit(param_samples.reshape(-1, 1))
+        bics.append(gmm.bic(param_samples.reshape(-1, 1)))  # Store the BIC
+        gmm_models.append(gmm)  # Store the model
+
+    # Select the model with the lowest BIC
+    best_n_components = n_components_range[np.argmin(bics)]
+    best_gmm = gmm_models[np.argmin(bics)]
+
+    print(f"Best number of components: {best_n_components}")
 
     # Predict the cluster for each sample
-    labels = gmm.predict(param_samples.reshape(-1, 1))
+    labels = best_gmm.predict(param_samples.reshape(-1, 1))
 
-    # Separate the samples into two clusters
-    cluster_1 = param_samples[labels == 0]
-    cluster_2 = param_samples[labels == 1]
+    # Separate the samples into clusters
+    clusters = [param_samples[labels == k] for k in range(best_n_components)]
 
-    q16_1, q50_1, q84_1 = np.percentile(cluster_1, [16, 50, 84])
-    q16_2, q50_2, q84_2 = np.percentile(cluster_2, [16, 50, 84])
-
-    print(f"\nPeak 1: {q50_1:.2f} +{q84_1 - q50_1:.2f} -{q50_1 - q16_1:.2f}")
-    print(f"Peak 2: {q50_2:.2f} +{q84_2 - q50_2:.2f} -{q50_2 - q16_2:.2f}")
-
-
-    plt.hist(cluster_1, bins=30, alpha=0.5, label="Peak 1")
-    plt.hist(cluster_2, bins=30, alpha=0.5, label="Peak 2")
+    # Plot the histogram for each cluster
+    plt.figure(figsize=(8, 6))
+    for k, cluster in enumerate(clusters):
+        plt.hist(cluster, bins=30, alpha=0.5, label=f"Cluster {k+1}")
     plt.legend()
     plt.xlabel("Parameter Value")
     plt.ylabel("Frequency")
-    plt.title("Bimodal Distribution")
+    plt.title(f"Distribution with {best_n_components} Components")
     plt.show()
 
+    # Compute statistics for each cluster
+    for k, cluster in enumerate(clusters):
+        q16, q50, q84 = np.percentile(cluster, [16, 50, 84])
+        print(f"Cluster {k+1}: {q50:.2f} +{q84 - q50:.2f} -{q50 - q16:.2f}")
+
+    # Find the dominant cluster (the one with the most samples)
+    dominant_cluster = max(clusters, key=len)
+
+    # Compute the 50th percentile (median) of the dominant cluster
+    dominant_median = np.percentile(dominant_cluster, 50)
+    parameters_fit.append(dominant_median)
+
+    print(f"Most dominant cluster has {len(dominant_cluster)} samples.")
+    print(f"50th percentile (median) of the dominant cluster: {dominant_median:.2f}")
+
+
+plot_data(x, y, parameters_fit, *xrange, sigy=sigy, b=b, segments=segments, filename='check2_guessed_soln_3')
 
 end_time_2 = time.time()
 time_taken = end_time_2 - start_time
