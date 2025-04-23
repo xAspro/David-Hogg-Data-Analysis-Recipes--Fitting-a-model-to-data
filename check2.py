@@ -182,7 +182,7 @@ def logposterior_segments(params, NUM, xi, yi, segments):
     return (lp + 10 * ll)
 
 
-def run_mcmc(x, y, NUM, segments, nwalkers=250, n_burn=1, n_prod=15000):
+def run_mcmc(x, y, NUM, segments, nwalkers=50, n_burn=1, n_prod=15000):
     """
     Run MCMC to fit the data.
     """
@@ -294,7 +294,7 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, b, segments, filename=None):
     Z /= np.max(Z)
 
     # Define contour levels for 90%, 50%, and 10%
-    contour_levels = [0.1, 0.5, 0.9]
+    contour_levels = [0.01, 0.1, 0.5, 0.9]
 
 
     # Plot the color map
@@ -303,8 +303,8 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, b, segments, filename=None):
     plt.colorbar(contourf, label='Gaussian Value')
 
     # Add contours for specific levels
-    contours = plt.contour(X, Y, Z, levels=contour_levels, colors=['red', 'blue', 'white'], linewidths=1.5)
-    plt.clabel(contours, inline=True, fontsize=6, fmt={0.1: '10%', 0.5: '50%', 0.9: '90%'})
+    contours = plt.contour(X, Y, Z, levels=contour_levels, colors=['green', 'red', 'blue', 'white'], linewidths=1.5)
+    plt.clabel(contours, inline=True, fontsize=6, fmt={0.01: '1%', 0.1: '10%', 0.5: '50%', 0.9: '90%'})
 
 
 
@@ -332,7 +332,7 @@ b_max = 1
 
 try:
     # x, y, sigy, b, segments, NUM = make_data(99, *xrange, 2, 1, 2, b_max, parameters)
-    x, y, sigy, b, segments, NUM = make_data(999, *xrange, 5, 0.1, 2, 2, parameters)
+    x, y, sigy, b, segments, NUM = make_data(9999, *xrange, 5, 0.1, 2, 2, parameters)
     # import sys
     # sys.exit(0)
 
