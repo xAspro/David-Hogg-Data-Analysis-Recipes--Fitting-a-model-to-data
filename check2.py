@@ -201,7 +201,7 @@ def run_mcmc(x, y, NUM, segments, nwalkers=50, n_burn=1, n_prod=15000):
     p0[:, 1] = np.random.uniform(-27.5, -25.4, nwalkers)  # M_star
     p0[:, 2] = np.random.uniform(-5.8, -3.7, nwalkers)  # alpha
     p0[:, 3] = np.random.uniform(-2.8, -0.7, nwalkers)  # beta
-    p0[:, NUM:] = np.random.uniform(1, 30, (nwalkers, 2 * N))  # sigyi2
+    p0[:, NUM:] = np.random.uniform(1, 5, (nwalkers, 2 * N))  # sigyi2
 
     # Set up the MCMC sampler
     sampler = emcee.EnsembleSampler(nwalkers, NUM + 2 * N, logposterior_segments, args=(NUM, x, y, segments))
