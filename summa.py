@@ -4,9 +4,13 @@ import corner
 import time
 import sys
 import emcee
+import datetime
+
+# Define the current time at the start of the program
+current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 flag = 0
-sig = 2
+sig = 20
 def function(x, params):
     return np.polyval(params, x)
 
@@ -34,9 +38,13 @@ def create_data(num_good_points=100, num_bad_points=10):
     plt.legend()
     plt.grid()
     # plt.show()
+    plt.savefig(f"summa_real_data_plot_{current_time}.png") 
     plt.close()
 
-    return np.sort(np.concatenate((x_good, x_bad))), np.concatenate((y_good, y_bad))
+    x_combined = np.concatenate((x_good, x_bad))
+    y_combined = np.concatenate((y_good, y_bad))
+    sorted_indices = np.argsort(x_combined)
+    return np.sort(x_combined), y_combined[sorted_indices]
 
 def logprior(params, NUM=2):
     func_params = params[:NUM]
@@ -44,7 +52,7 @@ def logprior(params, NUM=2):
 
     if Pb < 0 or Pb > 1:
         return -np.inf
-    if Vb < 0:
+    if Vb <= 0:
         return -np.inf
 
     return - np.log(1 + Pb) - np.log(1 + Vb)
@@ -54,8 +62,12 @@ def loglikelihood(params, x, y, NUM=2):
     Pb, Yb, Vb = params[NUM:]
 
 
-    logforeground_model = np.log((1 / np.sqrt(2 * np.pi * sig**2))) + (-0.5 * ((y - function(x, func_params)) / sig)**2)
-    logbackground_model = np.log((1 / np.sqrt(2 * np.pi * (Vb + sig**2)))) + (-0.5 * ((y - Yb)**2 / (Vb + sig**2)))
+    epsilon = 1e-10  # Small value to prevent division by zero
+    safe_sig2 = sig**2 + epsilon
+    safe_Vb = Vb + epsilon
+
+    logforeground_model = np.log((1 / np.sqrt(2 * np.pi * safe_sig2))) + (-0.5 * np.clip(((y - function(x, func_params)) / sig)**2, -1e10, 1e10))
+    logbackground_model = np.log((1 / np.sqrt(2 * np.pi * (safe_Vb + safe_sig2)))) + (-0.5 * np.clip(((y - Yb)**2 / (safe_Vb + safe_sig2)), -1e10, 1e10))
 
     a = np.log(1 - Pb) + logforeground_model
     b = np.log(Pb) + logbackground_model
@@ -209,12 +221,12 @@ def plot_corner(samples_2d, title):
         levels=(0.68, 0.95),  # Confidence levels for contours
         color="black",  # Color of the plots
     )
-    plt.savefig("corner_plot_1.png")  # Save the corner plot as a PNG file
+    plt.savefig(f"corner_plot_1_{current_time}.png")  # Save the corner plot as a PNG file with the current time
     plt.show()
 
     fig = plt.figure(figsize=(12, 8), dpi=100)
     corner.corner(samples_2d, fig=fig, labels=title, show_titles=True, quantiles=[0.16, 0.5, 0.84])
-    plt.savefig("corner_plot_2.png")  # Save the corner plot as a PNG file
+    plt.savefig(f"corner_plot_2_{current_time}.png")  # Save the corner plot as a PNG file with the current time
     plt.show()
 
 def mcmc_1_main(data, num_walkers=50, num_samples=10000, num_burnin=1000, num_thin=10, NUM=2):
@@ -225,7 +237,7 @@ def mcmc_1_main(data, num_walkers=50, num_samples=10000, num_burnin=1000, num_th
 
     # param_ranges = [(-5, 5), (-10, 10), (0, 1), (-20, 20), (10, 10)]
     # param_ranges = [(1.95, 2.05), (-0.1, 0.1), (0, 1), (-10, 10), (0, 5)]
-    param_ranges = [(1, 3), (-2, 2), (0, 1), (-10, 10), (0, 5)]
+    param_ranges = [(1, 3), (-2, 2), (0.1, 0.9), (-10, 10), (1, 5)]
 
     for i in range(num_walkers):
         initial_params = np.array([np.random.uniform(low, high) for low, high in param_ranges])
@@ -319,7 +331,7 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
     ndim = NUM + 3  # Number of parameters (2 for function params, 3 for Pb, Yb, Vb)
     nwalkers = nwalkers
 
-    param_ranges = [(1, 3), (-2, 2), (0, 1), (-10, 10), (0, 5)]
+    param_ranges = [(1, 3), (-2, 2), (0.1, 0.9), (-10, 10), (1, 5)]
 
     p0 = np.array([np.random.uniform(low, high, size=nwalkers) for low, high in param_ranges]).T
 
@@ -356,8 +368,8 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
 
     fig = plt.figure(figsize=(12, 8), dpi=100)
     corner.corner(samples, labels=["m", "c", "Pb", "Yb", "Vb"], fig=fig, show_titles=True, quantiles=[0.16, 0.5, 0.84])
+    plt.savefig(f"summa_corner_plot_3_{current_time}.png")  # Save the corner plot as a PNG file with the current time
     plt.show()
-    plt.savefig("summa_corner_plot_3.png")  # Save the corner plot as a PNG file
     plt.close()
 
 
@@ -370,8 +382,21 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
         ax.set_ylabel(f"param {i}")
         ax.yaxis.set_label_coords(-0.1, 0.5)
     plt.xlabel("step number")
-    plt.savefig("summa_chain_plot_3.png")  # Save the chain plot as a PNG file
+    plt.savefig(f"summa_chain_plot_3_{current_time}.png")  # Save the chain plot as a PNG file with the current time
     plt.close()
+
+    # Print acceptance rate
+    acceptance_rate = np.mean(sampler.acceptance_fraction)
+    print(f"Acceptance rate: {acceptance_rate:.4f}")
+
+    # Compute and print autocorrelation time
+    try:
+        tau = sampler.get_autocorr_time()
+        print("Autocorrelation time for each parameter:")
+        for i, t in enumerate(tau):
+            print(f"  Parameter {i}: {t:.2f}")
+    except emcee.autocorr.AutocorrError:
+        print("Warning: Autocorrelation time could not be reliably estimated.")
 
     return [stats["median"] for param, stats in results.items()]
 
@@ -430,11 +455,16 @@ def find_bad_data(data, param, NUM=2):
 
 # data = create_data(15, 3)
 # data = create_data(20, 5)
-# data = create_data(100, 1)
-data = create_data()
+data = create_data(100, 10)
+# data = create_data(10, 10)
+# print("data points are")
+# for i in range(len(data[0])):
+#     print(f"({data[0][i]}, {data[1][i]})")
+
+# sys.exit(0)
 
 # mcmc_main(data, num_walkers=3, num_samples=10, num_burnin=2, num_thin=2, NUM=2)
-n_walkers = 20
+n_walkers = 50
 n_prod = 100000
 n_burn = 1000
 n_thin = 50
@@ -448,6 +478,8 @@ print(f"\n\nres_1 = {res_1}\nres_2 = {res_2}\n\n")
 x_arr = np.linspace(0, 100, 100)
 y_arr = function(x_arr, res_1[:2])
 
+y_bad_func_1 = function(x_arr, res_2[3:5])
+
 prob_bad_points_1 = find_bad_data(data, res_1, NUM=2)
 
 print("prob_bad_points = ", prob_bad_points_1)
@@ -458,35 +490,80 @@ print("mask = ", mask)
 # print("sigys = ", sigys)
 # print("sigy = ", sigy)
 
-plt.scatter(data[0][~mask], data[1][~mask], c='red', label='Data Points', edgecolor='black', s=14)
-plt.scatter(data[0][mask], data[1][mask], facecolors='none', edgecolors='red', s=8, label='Bad Data Points', alpha=0.5)
-plt.errorbar(data[0], data[1], yerr=sig, fmt='o', alpha=0.6, capsize=0.4)
+# plt.errorbar(A, B, yerr=sig, fmt='o', ms=10, capsize=4, zorder=1)
+# plt.scatter(A[mask], B[mask], facecolors='red', edgecolors='red', s=50, label='Bad Data Points', zorder=2)
+
+plt.errorbar(data[0], data[1], yerr=sig, fmt='o', ms=10, capsize=4, zorder=1)
+plt.scatter(data[0][mask], data[1][mask], c='red', label='Bad Data Points', alpha=0.7, edgecolor='black', s=50, zorder=2)
+
+# plt.scatter(data[0][~mask], data[1][~mask], c='red', label='Data Points', edgecolor='black', s=14)
+# plt.scatter(data[0][mask], data[1][mask], facecolors='none', edgecolors='red', s=8, label='Bad Data Points', alpha=0.5)
+# plt.errorbar(data[0], data[1], yerr=sig, fmt='o', alpha=0.6, capsize=0.4)
 plt.xlabel('x')
 plt.ylabel('y')
 plt.title('Fitting for x with Bad data in dataset')
 plt.plot(x_arr, y_arr, color='blue', label='Good Function')
+plt.plot(x_arr, y_bad_func_1, color='red', label='Bad Function')
+plt.xlim(-5, 105)
+plt.ylim(-10, 410)
 plt.legend()
 plt.grid()
-plt.savefig("summa_plot_1.png")  # Save the plot as a PNG file
+plt.savefig(f"summa_plot_1_{current_time}.png")  # Save the plot as a PNG file with the current time
 plt.show()
 plt.close()
 
 
 prob_bad_points_2 = find_bad_data(data, res_2, NUM=2)
 
+y_arr_2 = function(x_arr, res_2[:2])
+y_bad_func_2 = function(x_arr, res_2[3:5])
+
 print("prob_bad_points = ", prob_bad_points_2)
 mask = prob_bad_points_2 > 0.5
 print("mask = ", mask)
 
-plt.scatter(data[0][~mask], data[1][~mask], c='red', label='Data Points', edgecolor='black', s=14)
-plt.scatter(data[0][mask], data[1][mask], facecolors='none', edgecolors='red', s=8, label='Bad Data Points', alpha=0.5)
-plt.errorbar(data[0], data[1], yerr=sig, fmt='o', alpha=0.6, capsize=0.6)
+
+plt.errorbar(data[0], data[1], yerr=sig, fmt='o', ms=10, capsize=4, zorder=1)
+plt.scatter(data[0][mask], data[1][mask], c='red', label='Bad Data Points', alpha=0.7, edgecolor='black', s=50, zorder=2)
+
+
+# plt.scatter(data[0][~mask], data[1][~mask], c='red', label='Data Points', edgecolor='black', s=14)
+# plt.scatter(data[0][mask], data[1][mask], facecolors='none', edgecolors='red', s=8, label='Bad Data Points', alpha=0.5)
+# plt.errorbar(data[0], data[1], yerr=sig, fmt='o', alpha=0.6, capsize=0.6)
 plt.xlabel('x')
 plt.ylabel('y')
 plt.title('Fitting for x with Bad data in dataset')
 plt.plot(x_arr, y_arr, color='blue', label='Good Function')
+plt.plot(x_arr, y_bad_func_2, color='red', label='Bad Function')
+plt.xlim(-5, 105)
+plt.ylim(-10, 410)
 plt.legend()
 plt.grid()
-plt.savefig("summa_plot_2.png")  # Save the plot as a PNG file
+plt.savefig(f"summa_plot_2_{current_time}.png")  # Save the plot as a PNG file with the current time
 plt.show()
 plt.close()
+
+
+# import matplotlib.pyplot as plt
+# import numpy as np
+
+# n = 20
+# sig_max = 10
+
+# A = np.sort(np.random.uniform(0, 100, n))
+# sig = np.random.uniform(0, sig_max, n)
+# B = A + np.random.normal(0, sig, n)
+
+# x = np.linspace(0, 100, 100)
+
+
+# mask = sig > sig_max / 2
+# print(mask)
+# print('percent of bad points = ', np.sum(mask) / n * 100,'%')
+# # plt.scatter(A[~mask], B[~mask], c='red', label='Data Points', edgecolor='black', s=50)
+# plt.errorbar(A, B, yerr=sig, fmt='o', ms=10, capsize=4, zorder=1)
+# plt.scatter(A[mask], B[mask], facecolors='red', edgecolors='red', s=50, label='Bad Data Points', zorder=2)
+
+# plt.plot(x, x, color='blue', label='Good Function')
+# plt.grid()
+# plt.show()
