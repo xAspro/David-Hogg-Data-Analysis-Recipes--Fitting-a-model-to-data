@@ -10,15 +10,25 @@ import datetime
 current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 flag = 0
-sig = 20
+sig = 0.2
 def function(x, params):
-    return np.polyval(params, x)
+    # return np.polyval(params, x)
+    logphi = params[0]
+    M_star = params[1]
+    alpha = params[2]
+    beta = params[3]
+
+    return logphi / (10**(0.4 * (x - M_star) * alpha) + 10**(0.4 * (M_star - x) * beta))
+
 
 def create_data(num_good_points=100, num_bad_points=10):
     # good_param = [2, 0]
     # bad_param = [4, 0]
-    good_param = [2, 3]
-    bad_param = [4, 2]
+    # good_param = [2, 3]
+    # bad_param = [-4, 2]
+
+    good_param = [2, 30, 0.5, 0.5]
+    bad_param = [4, 30, 0.5, 0.5]
 
 
     x_good = np.sort(np.random.uniform(0, 100, num_good_points))
@@ -56,10 +66,13 @@ def logprior(params, NUM=2):
         return -np.inf
     if Vb <= 0:
         return -np.inf
-    if abs(func_params[0]) > 100 or np.abs(func_params[1]) > 1000:
+    if abs(func_params[0]) > 10 or np.abs(func_params[1]) > 100:
+        return -np.inf
+    
+    if abs(func_params[2] > 5) or abs(func_params[3]) > 5:
         return -np.inf
 
-    return - np.log(1 + Pb) - np.log(1 + Vb)
+    return - np.log(1 + Pb) - np.log(1 + Vb) 
 
 def loglikelihood(params, x, y, NUM=2):
     func_params = params[:NUM]
@@ -340,13 +353,14 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
     ndim = NUM + 3  # Number of parameters (2 for function params, 3 for Pb, Yb, Vb)
     nwalkers = nwalkers
 
-    param_ranges = [(1, 3), (-2, 2), (0.1, 0.9), (-10, 10), (1, 5)]
+    # param_ranges = [(1, 3), (-2, 2), (0.1, 0.9), (-10, 10), (1, 5)]
+    param_ranges = [(0, 5), (-20, 20), (-1, 1), (-1, 1), (0.1, 0.9), (-10, 10), (1, 5)]
 
     p0 = np.array([np.random.uniform(low, high, size=nwalkers) for low, high in param_ranges]).T
 
     assert p0.shape == (nwalkers, len(param_ranges)), "Shape of p0 is incorrect!"
 
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=[x, y])
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=[x, y, NUM])
 
     sampler.run_mcmc(p0, nburn)
     sampler.reset()
@@ -376,7 +390,8 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
         print(f"  1-Sigma Upper: {stats['1sigma_upper']}")
 
     fig = plt.figure(figsize=(12, 8), dpi=100)
-    corner.corner(samples, labels=["m", "c", "Pb", "Yb", "Vb"], fig=fig, show_titles=True, quantiles=[0.16, 0.5, 0.84])
+    # corner.corner(samples, labels=["m", "c", "Pb", "Yb", "Vb"], fig=fig, show_titles=True, quantiles=[0.16, 0.5, 0.84])
+    corner.corner(samples, labels=["logphi", "M_star", "alpha", "beta", "Pb", "Yb", "Vb"], fig=fig, show_titles=True, quantiles=[0.16, 0.5, 0.84])
     plt.savefig(f"summa_corner_plot_3_{current_time}.png")  # Save the corner plot as a PNG file with the current time
     plt.show()
     plt.close()
@@ -477,11 +492,12 @@ n_walkers = 50
 n_prod = 100000
 n_burn = 1000
 n_thin = 50
+NUM = 4
 
 # res_1 = mcmc_1_main(data, num_walkers=n_walkers, num_samples=n_prod, num_burnin=n_burn, num_thin=n_thin, NUM=2)
 
 
-res_2 = mcmc_2_main(data, nwalkers=n_walkers, nprod=n_prod, nburn=n_burn, NUM=2)
+res_2 = mcmc_2_main(data, nwalkers=n_walkers, nprod=n_prod, nburn=n_burn, NUM=NUM)
 
 # print(f"\n\nres_1 = {res_1}\nres_2 = {res_2}\n\n")
 
@@ -524,10 +540,10 @@ x_arr = np.linspace(0, 100, 100)
 
 print("res_2 = ", res_2)
 
-prob_bad_points_2 = find_bad_data(data, res_2, NUM=2)
+prob_bad_points_2 = find_bad_data(data, res_2, NUM=NUM)
 
-y_arr_2 = function(x_arr, res_2[:2])
-y_bad_func_2 = function(x_arr, res_2[3:5])
+y_arr_2 = function(x_arr, res_2[:NUM])
+# y_bad_func_2 = function(x_arr, res_2[NUM+1:])
 
 print("prob_bad_points = ", prob_bad_points_2)
 mask = prob_bad_points_2 > 0.5
@@ -545,9 +561,9 @@ plt.xlabel('x')
 plt.ylabel('y')
 plt.title('Fitting for x with Bad data in dataset')
 plt.plot(x_arr, y_arr_2, color='blue', label='Good Function')
-plt.plot(x_arr, y_bad_func_2, color='red', label='Bad Function')
+# plt.plot(x_arr, y_bad_func_2, color='red', label='Bad Function')
 plt.xlim(-5, 105)
-plt.ylim(-10, 410)
+# plt.ylim(-10, 410)
 plt.legend()
 plt.grid()
 plt.savefig(f"summa_plot_2_{current_time}.png")  # Save the plot as a PNG file with the current time
