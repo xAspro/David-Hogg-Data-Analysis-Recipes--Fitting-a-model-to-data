@@ -7,18 +7,21 @@ import emcee
 import datetime
 
 # Define the current time at the start of the program
-current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+start_time = datetime.datetime.now()
+# Get the current time in a formatted string
+current_time = start_time.strftime("%Y%m%d_%H%M%S")
 
 flag = 0
 sig = 0.2
 def function(x, params):
     # return np.polyval(params, x)
     logphi = params[0]
+    phi = 10**logphi
     M_star = params[1]
     alpha = params[2]
     beta = params[3]
 
-    return logphi / (10**(0.4 * (x - M_star) * alpha) + 10**(0.4 * (M_star - x) * beta))
+    return np.log10(phi / (10**(0.4 * (x - M_star) * (1 + alpha)) + 10**(0.4 * (x - M_star) * (1 + beta))))
 
 
 def create_data(num_good_points=100, num_bad_points=10):
@@ -27,19 +30,31 @@ def create_data(num_good_points=100, num_bad_points=10):
     # good_param = [2, 3]
     # bad_param = [-4, 2]
 
-    good_param = [2, 30, 0.5, 0.5]
-    bad_param = [4, 30, 0.5, 0.5]
+    # xlim = (0, 100)
+    # ylim = (-500, 500)
+
+    # good_param = [2, 30, -0.5, -0.5]
+    # bad_param = [4, 35, -0.45, -1.55]
+
+    good_param = [-5.72, -21.3, -2.74, -1.07]
+    bad_param = [-7.72, -22.3, -2.84, -1.17]
+
+    # good_param = [-5.98, -25.16, -3.13, -1.05]
+    # bad_param = [-5.98, -25.16, -3.13, -1.05]
+
+    xlim = (-31, -19)
+    ylim = (-14, -2)
 
 
-    x_good = np.sort(np.random.uniform(0, 100, num_good_points))
+    x_good = np.sort(np.random.uniform(xlim[0], xlim[1], num_good_points))
     y_good = function(x_good, good_param) + np.random.normal(0, sig, num_good_points)
 
-    x_bad = np.sort(np.random.uniform(0, 100, num_bad_points))
+    x_bad = np.sort(np.random.uniform(xlim[0], xlim[1], num_bad_points))
     y_bad = function(x_bad, bad_param) + np.random.normal(0, sig, num_bad_points)
 
     plt.scatter(x_good, y_good, color='blue', label='Good Points')
     plt.scatter(x_bad, y_bad, color='red', label='Bad Points')
-    x_arr = np.linspace(0, 100, 100)
+    x_arr = np.linspace(xlim[0], xlim[1], 1000)
     y_arr_good = function(x_arr, good_param)
     y_arr_bad = function(x_arr, bad_param)
     plt.plot(x_arr, y_arr_good, color='blue', label='Good Function')
@@ -48,8 +63,12 @@ def create_data(num_good_points=100, num_bad_points=10):
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.legend()
+    plt.xlim(xlim[1], xlim[0])
+    plt.ylim(ylim[0], ylim[1])
     plt.grid()
     # plt.show()
+    # import sys
+    # sys.exit(0)
     plt.savefig(f"summa_real_data_plot_{current_time}.png") 
     plt.close()
 
@@ -59,17 +78,27 @@ def create_data(num_good_points=100, num_bad_points=10):
     return np.sort(x_combined), y_combined[sorted_indices]
 
 def logprior(params, NUM=2):
-    func_params = params[:NUM]
+    # func_params = params[:NUM]
+    logphi, M_star, alpha, beta = params[:NUM]
     Pb, Yb, Vb = params[NUM:]
 
     if Pb < 0 or Pb > 1:
         return -np.inf
     if Vb <= 0:
         return -np.inf
-    if abs(func_params[0]) > 10 or np.abs(func_params[1]) > 100:
+    # if abs(func_params[0]) > 10 or np.abs(func_params[1]) > 100:
+    #     return -np.inf
+    
+    if logphi < -10 or logphi > 0:
         return -np.inf
     
-    if abs(func_params[2] > 5) or abs(func_params[3]) > 5:
+    if M_star < -50 or M_star > 0:
+        return -np.inf
+    
+    if alpha < -7 or alpha > beta:
+        return -np.inf
+    
+    if beta > 0:
         return -np.inf
 
     return - np.log(1 + Pb) - np.log(1 + Vb) 
@@ -402,7 +431,7 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
     for i in range(ndim):
         ax = axes[i]
         for j in range(nwalkers):
-            ax.plot(sampler.chain[j, :, i], color="k", alpha=0.3)
+            ax.plot(sampler.chain[j, :, i], color=colors[j], alpha=0.3)
         ax.set_ylabel(f"param {i}")
         ax.yaxis.set_label_coords(-0.1, 0.5)
     plt.xlabel("step number")
@@ -501,7 +530,8 @@ res_2 = mcmc_2_main(data, nwalkers=n_walkers, nprod=n_prod, nburn=n_burn, NUM=NU
 
 # print(f"\n\nres_1 = {res_1}\nres_2 = {res_2}\n\n")
 
-x_arr = np.linspace(0, 100, 100)
+# x_arr = np.linspace(0, 100, 100)
+x_arr = np.linspace(-31, -19, 1000)
 # y_arr_1 = function(x_arr, res_1[:2])
 
 # y_bad_func_1 = function(x_arr, res_2[3:5])
@@ -562,11 +592,18 @@ plt.ylabel('y')
 plt.title('Fitting for x with Bad data in dataset')
 plt.plot(x_arr, y_arr_2, color='blue', label='Good Function')
 # plt.plot(x_arr, y_bad_func_2, color='red', label='Bad Function')
-plt.xlim(-5, 105)
-# plt.ylim(-10, 410)
+plt.xlim(-19, -31)
+plt.ylim(-14, -2)
 plt.legend()
 plt.grid()
 plt.savefig(f"summa_plot_2_{current_time}.png")  # Save the plot as a PNG file with the current time
+
+
+end_time = datetime.datetime.now()
+elapsed_time = (end_time - start_time).total_seconds()
+print(f"Elapsed time: {elapsed_time:.2f} seconds")
+
+
 plt.show()
 plt.close()
 
