@@ -37,7 +37,7 @@ def create_data(num_good_points=100, num_bad_points=10):
     # bad_param = [4, 35, -0.45, -1.55]
 
     good_param = [-5.72, -21.3, -2.74, -1.07]
-    bad_param = [-7.72, -22.3, -2.84, -1.17]
+    bad_param = [-6.92, -25.3, -4.84, -1.57]
 
     # good_param = [-5.98, -25.16, -3.13, -1.05]
     # bad_param = [-5.98, -25.16, -3.13, -1.05]
@@ -422,18 +422,17 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
     # corner.corner(samples, labels=["m", "c", "Pb", "Yb", "Vb"], fig=fig, show_titles=True, quantiles=[0.16, 0.5, 0.84])
     corner.corner(samples, labels=["logphi", "M_star", "alpha", "beta", "Pb", "Yb", "Vb"], fig=fig, show_titles=True, quantiles=[0.16, 0.5, 0.84])
     plt.savefig(f"summa_corner_plot_3_{current_time}.png")  # Save the corner plot as a PNG file with the current time
-    plt.show()
+    # plt.show()
     plt.close()
 
 
     fig, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
-    colors = plt.cm.viridis(np.linspace(0, 1, sampler.nwalkers))
     for i in range(ndim):
         ax = axes[i]
-        for j in range(nwalkers):
-            ax.plot(sampler.chain[j, :, i], color=colors[j], alpha=0.3)
+        ax.plot(sampler.get_chain()[:, :, i], alpha=0.5)
         ax.set_ylabel(f"param {i}")
         ax.yaxis.set_label_coords(-0.1, 0.5)
+
     plt.xlabel("step number")
     plt.savefig(f"summa_chain_plot_3_{current_time}.png")  # Save the chain plot as a PNG file with the current time
     plt.close()
@@ -601,7 +600,7 @@ plt.savefig(f"summa_plot_2_{current_time}.png")  # Save the plot as a PNG file w
 
 end_time = datetime.datetime.now()
 elapsed_time = (end_time - start_time).total_seconds()
-print(f"Elapsed time: {elapsed_time:.2f} seconds")
+print(f"Elapsed time: {elapsed_time:.2f} seconds\n\n")
 
 
 plt.show()
