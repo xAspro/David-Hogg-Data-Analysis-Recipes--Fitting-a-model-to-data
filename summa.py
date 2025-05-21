@@ -37,7 +37,7 @@ def create_data(num_good_points=100, num_bad_points=10):
     # bad_param = [4, 35, -0.45, -1.55]
 
     good_param = [-5.72, -21.3, -2.74, -1.07]
-    bad_param = [-6.92, -25.3, -4.84, -1.57]
+    bad_param = [-8.92, -25.3, -4.84, -1.57]
 
     # good_param = [-5.98, -25.16, -3.13, -1.05]
     # bad_param = [-5.98, -25.16, -3.13, -1.05]
@@ -64,7 +64,7 @@ def create_data(num_good_points=100, num_bad_points=10):
     plt.ylabel('Y-axis')
     plt.legend()
     plt.xlim(xlim[1], xlim[0])
-    plt.ylim(ylim[0], ylim[1])
+    # plt.ylim(ylim[0], ylim[1])
     plt.grid()
     # plt.show()
     # import sys
@@ -592,7 +592,7 @@ plt.title('Fitting for x with Bad data in dataset')
 plt.plot(x_arr, y_arr_2, color='blue', label='Good Function')
 # plt.plot(x_arr, y_bad_func_2, color='red', label='Bad Function')
 plt.xlim(-19, -31)
-plt.ylim(-14, -2)
+# plt.ylim(-14, -2)
 plt.legend()
 plt.grid()
 plt.savefig(f"summa_plot_2_{current_time}.png")  # Save the plot as a PNG file with the current time
