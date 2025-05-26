@@ -49,12 +49,21 @@ y_initial = smooth_function(x_fit, *p0)
 # print(f"Fitted parameters:\n  f = {params[0]:.3f}\n  m = {params[1]:.3f}\n  a = {params[2]:.3f}\n  b = {params[3]:.3f}")
 print(f"Fitted parameters:\n  m1 = {params[0]:.3f}\n  c1 = {params[1]:.3f}\n  m2 = {params[2]:.3f}\n  c2 = {params[3]:.3f}")
 
+
+a = - (params[3] - params[1]) / (params[2] - params[0])
 # Plot
 plt.figure(figsize=(8, 5))
 plt.scatter(x_data, y_data, label='Data', color='black')
 plt.plot(x_fit, y_fit, label='Fitted smooth linear blend', color='red')
 # plt.plot(x_fit, y_initial, label='Initial guess', color='blue', linestyle='--')
-plt.axvline(params[1], color='gray', linestyle='--', label=f'm = {params[1]:.2f}')
+plt.axvline(a, color='gray', linestyle='--', label=f'a = {params[1]:.2f}')
+
+x_arr1 = np.linspace(min(x_fit), a, 100)
+x_arr2 = np.linspace(a, max(x_fit), 100)
+y_arr1 = params[0] * x_arr2 + params[1]
+y_arr2 = params[2] * x_arr1 + params[3]
+plt.plot(x_arr1, y_arr1, color='blue', linestyle='--', label='Left side fit')
+plt.plot(x_arr2, y_arr2, color='green', linestyle='--', label='Right side fit')
 plt.title('Smooth Piecewise Linear Fit')
 plt.xlabel('x')
 plt.ylabel('y')
