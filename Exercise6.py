@@ -52,7 +52,7 @@ def logposterior(params, xi, yi, sigyi):
     return lp + loglikelihood(params, xi, yi, sigyi) 
 
 
-def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
+def run_mcmc(xi, yi, sigyi, nwalkers=100, nsteps_burn=200, nsteps_prod=2000):
     """
     Run the MCMC simulation using emcee.
     """
@@ -226,6 +226,37 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
     plt.savefig('Exercise6_fit.pdf', bbox_inches='tight')
     plt.show()
 
+def plot_fit_with_confidence_band(x, y, sigy, samples, x_plot=None):
+    if x_plot is None:
+        x_plot = np.linspace(min(x), max(x), 200)
+    # Compute all predicted y values for each sample
+    reduced_samples_indices = np.random.choice(len(samples), size=len(samples)//2, replace=False)
+    reduced_samples = samples[reduced_samples_indices]
+    y_samples = np.array([m * x_plot + b for m, b, Pb, Yb, Vb in reduced_samples])
+    # Compute percentiles at each x
+    # Compute percentiles for 1σ, 2σ, and 3σ confidence bands
+    lower_1 = np.percentile(y_samples, 16, axis=0)
+    median = np.percentile(y_samples, 50, axis=0)
+    upper_1 = np.percentile(y_samples, 84, axis=0)
+
+    lower_2 = np.percentile(y_samples, 2.5, axis=0)
+    upper_2 = np.percentile(y_samples, 97.5, axis=0)
+
+    lower_3 = np.percentile(y_samples, 0.15, axis=0)
+    upper_3 = np.percentile(y_samples, 99.85, axis=0)
+
+    plt.errorbar(x, y, yerr=sigy, fmt='o', color='red', markersize=4, label="Data", capsize=3, capthick=1)
+    plt.plot(x_plot, median, color='blue', label='Median fit')
+    plt.fill_between(x_plot, lower_1, upper_1, color='blue', alpha=0.3, label='±1σ region')
+    plt.fill_between(x_plot, lower_2, upper_2, color='blue', alpha=0.15, label='±2σ region')
+    plt.fill_between(x_plot, lower_3, upper_3, color='blue', alpha=0.07, label='±3σ region')
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Line fit with ±1σ confidence band")
+    plt.legend()
+    plt.savefig('Exercise6_fit_with_confidence_band.png', bbox_inches='tight')
+    plt.savefig('Exercise6_fit_with_confidence_band.pdf', bbox_inches='tight')
+    plt.show()
 
 
 def main():
@@ -288,6 +319,7 @@ def main():
 
     plot_chains(sampler)
     plot_fit_with_samples(x, y, sigy, samples)
+    plot_fit_with_confidence_band(x, y, sigy, samples)
 
 
 
