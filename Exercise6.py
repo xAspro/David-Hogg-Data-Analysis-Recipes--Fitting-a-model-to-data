@@ -229,9 +229,10 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
 def plot_fit_with_confidence_band(x, y, sigy, samples, x_plot=None):
     if x_plot is None:
         x_plot = np.linspace(min(x), max(x), 200)
-    # Compute all predicted y values for each sample
+    # Reducing the sample, as it is too large to work with all of them at once
     reduced_samples_indices = np.random.choice(len(samples), size=len(samples)//2, replace=False)
     reduced_samples = samples[reduced_samples_indices]
+    # Compute all predicted y values for each of the reduced sample
     y_samples = np.array([m * x_plot + b for m, b, Pb, Yb, Vb in reduced_samples])
     # Compute percentiles at each x
     # Compute percentiles for 1σ, 2σ, and 3σ confidence bands
