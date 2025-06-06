@@ -19,6 +19,20 @@ sigy = np.array([61, 25, 38, 15, 21, 15, 27, 14, 30, 16, 14, 25, 52, 16, 34, 31,
 sigx = np.array([9, 4, 11, 7, 5, 9, 4, 4, 11, 7, 5, 5, 5, 6, 6, 5, 9, 8, 6, 5])
 rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, -0.69, 0.30, -0.46, -0.03, 0.50, 0.73, -0.52, 0.90, 0.40, -0.78, -0.56])
 
+# Plot x vs y with error bars for sigy
+plt.figure(figsize=(8, 5))
+plt.errorbar(x, y, yerr=sigy, fmt='o', capsize=3, capthick=2, label='All Data')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.title('David Hogg\'s Data Analysis Example Data')
+plt.grid(True)
+plt.legend()
+plt.xlim(0, 300)
+plt.ylim(0, 700)
+plt.savefig('Exercise1_all_data.png', bbox_inches='tight')
+plt.savefig('Exercise1_all_data.pdf', bbox_inches='tight')
+plt.show()
+
 id = id[4:].reshape(-1, 1)
 x = x[4:].reshape(-1, 1)
 y = y[4:].reshape(-1, 1)
