@@ -44,7 +44,7 @@ def calculate_probability_using_batch_method(data):
         return log_likelihood(p, data) + log_prior(p, data)
 
     def mcmc(data, n_walkers=100, n_samples=1000, burn_in=100):
-        sampler = emcee.EnsembleSampler(nwalkers=n_walkers, dim=1, 
+        sampler = emcee.EnsembleSampler(nwalkers=n_walkers, ndim=1, 
                                         log_prob_fn=log_posterior, 
                                         args=[data])
 
@@ -52,13 +52,18 @@ def calculate_probability_using_batch_method(data):
         sampler.run_mcmc(p0, n_samples + burn_in, progress=True)
 
         # Get all samples (no discard)
-        all_samples = sampler.get_chain(flat=True)
+        all_samples = sampler.get_chain()
         # Get samples after burn-in
-        samples = sampler.get_chain(discard=burn_in, flat=True)
+        samples = sampler.get_chain(discard=burn_in)
 
-        # Plot chains (no discard)
+        # Plot chains (no discard), each walker in a different color
+        n_steps, n_walkers, ndim = all_samples.shape
+
         plt.figure(figsize=(10, 4))
-        plt.plot(all_samples, alpha=0.5)
+        for i in range(n_walkers):
+            plt.plot(all_samples[:, i, 0], alpha=0.7, label=f"Walker {i+1}" if n_walkers <= 10 else None)
+        if n_walkers <= 10:
+            plt.legend()
         plt.title("Chains (no discard)")
         plt.xlabel("Step")
         plt.ylabel("p")
@@ -66,7 +71,7 @@ def calculate_probability_using_batch_method(data):
 
         # Plot corner (no discard)
         try:
-            corner.corner(all_samples, labels=["p"], show_titles=True)
+            corner.corner(all_samples.reshape(-1, all_samples.shape[-1]), labels=["p"], show_titles=True)
             plt.suptitle("Corner plot (no discard)")
             plt.show()
         except ImportError:
@@ -74,15 +79,31 @@ def calculate_probability_using_batch_method(data):
 
         # Plot chains (with burn-in discarded)
         plt.figure(figsize=(10, 4))
-        plt.plot(samples, alpha=0.5, marker='.', linestyle='None')
+        for i in range(n_walkers):
+            plt.plot(samples[:, i, 0], alpha=0.7, label=f"Walker {i+1}" if n_walkers <= 10 else None)
+        if n_walkers <= 10:
+            plt.legend()
         plt.title("Samples after burn-in")
         plt.xlabel("Sample")
         plt.ylabel("p")
         plt.show()
 
+        # Plot chains (no discard), each walker in a different color
+        n_steps, n_walkers, ndim = samples.shape
+
+        plt.figure(figsize=(10, 4))
+        for i in range(n_walkers):
+            plt.plot(samples[:, i, 0], alpha=0.7, label=f"Walker {i+1}" if n_walkers <= 10 else None)
+        if n_walkers <= 10:
+            plt.legend()
+        plt.title("Chains")
+        plt.xlabel("Step")
+        plt.ylabel("p")
+        plt.show()
+
         # Plot corner (with burn-in discarded)
         try:
-            corner.corner(samples, labels=["p"], show_titles=True)
+            corner.corner(samples.reshape(-1, samples.shape[-1]), labels=["p"], show_titles=True)
             plt.suptitle("Corner plot (after burn-in)")
             plt.show()
         except ImportError:
@@ -92,7 +113,24 @@ def calculate_probability_using_batch_method(data):
 
     samples = mcmc(data)
     return samples
-# samples = calculate_probability_using_batch_method(data)
+samples = calculate_probability_using_batch_method(data)
+
+# Plot the posterior from MCMC and the analytical Beta posterior for comparison
+plt.figure(figsize=(8, 4))
+# Histogram of MCMC samples (posterior)
+plt.hist(samples.reshape(-1), bins=50, density=True, alpha=0.6, label="MCMC Posterior")
+# Analytical Beta posterior
+wins = np.sum(data)
+losses = len(data) - wins
+theta_grid = np.linspace(0, 1, 1000)
+beta_pdf = beta.pdf(theta_grid, wins + 1, losses + 1)
+plt.plot(theta_grid, beta_pdf, 'r--', label=f"Beta({wins+1},{losses+1}) Posterior")
+plt.xlabel("p")
+plt.ylabel("Probability Density")
+plt.title("Posterior Distribution: MCMC vs Beta Function")
+plt.legend()
+plt.savefig("check4_mcmc_vs_beta_posterior.png")
+plt.show()
 
 
 def calculate_probability_by_updating_the_data(data, res=0.001):
