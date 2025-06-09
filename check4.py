@@ -17,9 +17,11 @@ import time
 start_time = time.time()
 
 
-p_head = 0.15  # Probability of head in a coin flip
-n = 100  # Number of samples
+p_head = 0.18  # Probability of head in a coin flip
+n = 1000  # Number of samples
 res=0.001  # Resolution for the posterior calculation
+
+x_arr = np.arange(0, 1 + res/100, res/100)
 
 def make_sample_data(p_head, n=1000):
     p = [1 - p_head, p_head] 
@@ -43,7 +45,7 @@ def calculate_probability_using_batch_method(data):
 
         return log_likelihood(p, data) + log_prior(p, data)
 
-    def mcmc(data, n_walkers=100, n_samples=1000, burn_in=100):
+    def mcmc(data, n_walkers=100, n_samples=10000, burn_in=100):
         sampler = emcee.EnsembleSampler(nwalkers=n_walkers, ndim=1, 
                                         log_prob_fn=log_posterior, 
                                         args=[data])
@@ -112,6 +114,16 @@ def calculate_probability_using_batch_method(data):
         return samples
 
     samples = mcmc(data)
+
+    # Calculate and print autocorrelation time and acceptance rate
+    try:
+        tau = emcee.autocorr.integrated_time(samples, quiet=True)
+        print(f"Autocorrelation time: {tau[0]:.2f}")
+    except Exception as e:
+        print(f"Could not compute autocorrelation time: {e}")
+
+    acceptance_fraction = np.mean(samples)
+    print(f"Mean acceptance rate: {np.mean(samples):.3f}")
     return samples
 samples = calculate_probability_using_batch_method(data)
 
@@ -132,6 +144,7 @@ plt.legend()
 plt.savefig("check4_mcmc_vs_beta_posterior.png")
 plt.show()
 
+print()
 
 def calculate_probability_by_updating_the_data(data, res=0.001):
     theta = np.arange(0, 1 + res, res)
@@ -196,8 +209,8 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
         # Plot Beta function (analytical posterior) for current data slice
         wins = np.sum(data[:frame+1])
         losses = (frame + 1) - wins
-        beta_pdf = beta.pdf(theta, wins + 1, losses + 1)
-        beta_line, = ax.plot(theta, beta_pdf / np.trapezoid(beta_pdf, theta), 'b--', label='Beta posterior')
+        beta_pdf = beta.pdf(x_arr, wins + 1, losses + 1)
+        beta_line, = ax.plot(x_arr, beta_pdf / np.trapezoid(beta_pdf, x_arr), 'b--', label='Beta posterior')
 
         # Add legend (only once)
         if not hasattr(ax, "_legend_added"):
@@ -255,7 +268,7 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
 posterior = calculate_probability_by_updating_the_data(data, res=res)
 
 print("Data:", data)
-print("Probability of heads:", np.mean(data))
+print("Fraction of heads:", np.mean(data))
 
 
 # Calculate mean and asymmetric 1-sigma (left and right) for the posterior
@@ -295,7 +308,7 @@ plt.text(
 )
 plt.legend()
 end_2_time = time.time()
-print(f"Total Time taken: {end_2_time - end_time:.2f} seconds")
+print(f"Total Time taken: {end_2_time - start_time:.2f} seconds")
 plt.show()
 
 
