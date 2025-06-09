@@ -17,9 +17,9 @@ import time
 start_time = time.time()
 
 
-p_head = 0.18  # Probability of head in a coin flip
+p_head = 0.70  # Probability of head in a coin flip
 n = 1000  # Number of samples
-res=0.001  # Resolution for the posterior calculation
+res=0.005  # Resolution for the posterior calculation
 
 x_arr = np.arange(0, 1 + res/100, res/100)
 
@@ -45,7 +45,7 @@ def calculate_probability_using_batch_method(data):
 
         return log_likelihood(p, data) + log_prior(p, data)
 
-    def mcmc(data, n_walkers=100, n_samples=10000, burn_in=100):
+    def mcmc(data, n_walkers=100, n_samples=1000, burn_in=100):
         sampler = emcee.EnsembleSampler(nwalkers=n_walkers, ndim=1, 
                                         log_prob_fn=log_posterior, 
                                         args=[data])
@@ -125,31 +125,42 @@ def calculate_probability_using_batch_method(data):
     acceptance_fraction = np.mean(samples)
     print(f"Mean acceptance rate: {np.mean(samples):.3f}")
     return samples
-samples = calculate_probability_using_batch_method(data)
 
-# Plot the posterior from MCMC and the analytical Beta posterior for comparison
-plt.figure(figsize=(8, 4))
-# Histogram of MCMC samples (posterior)
-plt.hist(samples.reshape(-1), bins=50, density=True, alpha=0.6, label="MCMC Posterior")
-# Analytical Beta posterior
-wins = np.sum(data)
-losses = len(data) - wins
-theta_grid = np.linspace(0, 1, 1000)
-beta_pdf = beta.pdf(theta_grid, wins + 1, losses + 1)
-plt.plot(theta_grid, beta_pdf, 'r--', label=f"Beta({wins+1},{losses+1}) Posterior")
-plt.xlabel("p")
-plt.ylabel("Probability Density")
-plt.title("Posterior Distribution: MCMC vs Beta Function")
-plt.legend()
-plt.savefig("check4_mcmc_vs_beta_posterior.png")
-plt.show()
 
-print()
+# samples = calculate_probability_using_batch_method(data)
+
+# # Plot the posterior from MCMC and the analytical Beta posterior for comparison
+# plt.figure(figsize=(8, 4))
+# # Histogram of MCMC samples (posterior)
+# plt.hist(samples.reshape(-1), bins=50, density=True, alpha=0.6, label="MCMC Posterior")
+# # Analytical Beta posterior
+# wins = np.sum(data)
+# losses = len(data) - wins
+# theta_grid = np.linspace(0, 1, 1000)
+# beta_pdf = beta.pdf(theta_grid, wins + 1, losses + 1)
+# plt.plot(theta_grid, beta_pdf, 'r--', label=f"Beta({wins+1},{losses+1}) Posterior")
+# plt.xlabel("p")
+# plt.ylabel("Probability Density")
+# plt.title("Posterior Distribution: MCMC vs Beta Function")
+# plt.legend()
+# plt.savefig("check4_mcmc_vs_beta_posterior.png")
+# plt.show()
+
+# print()
 
 def calculate_probability_by_updating_the_data(data, res=0.001):
     theta = np.arange(0, 1 + res, res)
-    prior = np.ones_like(theta) * 1 / len(theta)
-    last_frame = -1
+
+    def set_prior():
+        # prior = np.ones_like(theta) * 1 / len(theta)
+        prior = 1 / (theta + res)
+        normalized_prior = prior / np.trapezoid(prior, theta)
+        # print(f"Normalized prior: {normalized_prior}")
+        # return normalized_prior
+        return prior
+    
+    prior = set_prior()
+    last_frame = -np.inf
 
     def compute_posterior(new_data, prior):
         likelihood = theta * new_data + (1 - theta) * (1 - new_data)
@@ -164,64 +175,85 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
         return posterior
 
     fig, ax = plt.subplots()
+    print(f"Initial prior: {prior}")
+    print(f"Initial theta: {theta}")
     line, = ax.plot(theta, prior)
+    line.set_ydata(prior)
     # ax.set_ylim(0, 1)
     ax.set_xlim(0, 1)
     ax.set_xlabel("p")
     ax.set_ylabel("Posterior")
-    title = ax.set_title("Frame 1")
+    title = ax.set_title("Frame 0")
 
     def update(frame):
         nonlocal prior, last_frame
-        posterior = prior
 
         if frame > last_frame:
             last_frame = frame
+            if frame == -1:
+                prior = set_prior()
+                posterior = prior
+            else:
+                posterior = prior
+                new_data = data[frame]
+                # print(f"\nFrame {frame + 1}, new_data: {new_data}")
+                # print(f"Prior: {prior}")
+                posterior = compute_posterior(new_data, prior)
+                # print(f"Posterior: {posterior}")
+                prior = posterior 
 
-            new_data = data[frame]
-            # print(f"\nFrame {frame + 1}, new_data: {new_data}")
-            # print(f"Prior: {prior}")
-            posterior = compute_posterior(new_data, prior)
-            # print(f"Posterior: {posterior}")
-            line.set_ydata(posterior)
-            prior = posterior 
-        
-        title.set_text(f"Frame {frame + 1}")  # Update the existing title
+            ############################
+            line.set_ydata(prior)
+            title.set_text(f"Frame {frame + 1}")  # Update the existing title
 
-        # Remove previous lines if they exist
-        for artist in getattr(ax, "_bayes_artists", []):
-            artist.remove()
-        ax._bayes_artists = []
+            # Remove previous lines if they exist
+            for artist in getattr(ax, "_bayes_artists", []):
+                artist.remove()
+            ax._bayes_artists = []
 
-        # Calculate mean, median, and 1-sigma region for the current posterior
-        mean = np.trapezoid(theta * posterior, theta)
-        cdf = np.cumsum(posterior)
-        cdf = cdf / cdf[-1]
-        p16 = np.interp(0.16, cdf, theta)
-        p50 = np.interp(0.50, cdf, theta)
-        p84 = np.interp(0.84, cdf, theta)
+            # Calculate mean, median, and 1-sigma region for the current posterior
+            mean = np.trapezoid(theta * posterior, theta)
+            cdf = np.cumsum(posterior)
+            cdf = cdf / cdf[-1]
+            p16 = np.interp(0.16, cdf, theta)
+            p50 = np.interp(0.50, cdf, theta)
+            p84 = np.interp(0.84, cdf, theta)
 
-        # Plot median
-        median_line = ax.axvline(p50, color='g', linestyle='--', label='Median')
-        # Plot 1-sigma region
-        sigma_patch = ax.axvspan(p16, p84, color='orange', alpha=0.3, label='1-sigma')
+            # Plot median
+            median_line = ax.axvline(p50, color='g', linestyle='--', label='Median')
+            # Plot 1-sigma region
+            sigma_patch = ax.axvspan(p16, p84, color='orange', alpha=0.3, label='1-sigma')
 
-        # Plot Beta function (analytical posterior) for current data slice
-        wins = np.sum(data[:frame+1])
-        losses = (frame + 1) - wins
-        beta_pdf = beta.pdf(x_arr, wins + 1, losses + 1)
-        beta_line, = ax.plot(x_arr, beta_pdf / np.trapezoid(beta_pdf, x_arr), 'b--', label='Beta posterior')
+            # Plot Beta function (analytical posterior) for current data slice
+            wins = np.sum(data[:frame+1])
+            losses = (frame + 1) - wins
+            beta_pdf = beta.pdf(x_arr, wins + 1, losses + 1)
+            beta_line, = ax.plot(x_arr, beta_pdf / np.trapezoid(beta_pdf, x_arr), 'b--', label='Beta posterior')
 
-        # Add legend (only once)
-        if not hasattr(ax, "_legend_added"):
-            ax.legend()
-            ax._legend_added = True
+            # Calculate median and 1-sigma for Beta posterior
+            beta_cdf = np.cumsum(beta_pdf)
+            beta_cdf = beta_cdf / beta_cdf[-1]
+            beta_p16 = np.interp(0.16, beta_cdf, x_arr)
+            beta_p50 = np.interp(0.50, beta_cdf, x_arr)
+            beta_p84 = np.interp(0.84, beta_cdf, x_arr)
+            # Plot median
+            beta_median_line = ax.axvline(beta_p50, color='purple', linestyle=':', label='Beta Median')
+            # Plot 1-sigma region
+            beta_sigma_patch = ax.axvspan(beta_p16, beta_p84, color='cyan', alpha=0.2, label='Beta 1-sigma')
 
-        # Store artists for removal in next frame
-        ax._bayes_artists = [median_line, sigma_patch, beta_line]
-        max_post = np.max(posterior)
-        if max_post > ax.get_ylim()[1] * 0.95:
-            ax.set_ylim(0, max_post * 1.1)
+            # Add legend (only once)
+            if not hasattr(ax, "_legend_added"):
+                ax.legend()
+                ax._legend_added = True
+
+            # Store artists for removal in next frame
+            ax._bayes_artists = [median_line, sigma_patch, beta_line, beta_median_line, beta_sigma_patch]
+
+            max_post = np.max(posterior)
+            if max_post > ax.get_ylim()[1] * 0.95:
+                ax.set_ylim(0, max_post * 1.1)
+            elif max_post < ax.get_ylim()[1] * 0.5:
+                ax.set_ylim(0, max_post * 1.5)
 
         return line, title
 
@@ -241,23 +273,26 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
 
     def reset():
         nonlocal prior, last_frame
-        prior = np.ones_like(theta) * 1 / len(theta)
-        last_frame = -1
+        prior = set_prior()
+        last_frame = -np.inf
         line.set_ydata(prior)
-        title.set_text("Frame 1")
+        title.set_text("Frame 0")
         ax.set_ylim(0, 1)
         return line, title
 
-    frames = get_variable_frames(data)
+    frames = [-1] * 10 + get_variable_frames(data)
+    print("frames:", frames)
 
     ani = FuncAnimation(fig, update, frames=frames, blit=False, repeat=False, interval=50)
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
+
     filename = f"check4_bayes_theorem_animation_{now}.mp4"
     ani.save(filename, writer='ffmpeg')
     reset()
-    ani.save(filename.replace('.mp4', '.mov'), writer='ffmpeg')
-    reset()
-    print(f"Animation saved as {filename}")
+
+    # ani.save(filename.replace('.mp4', '.mov'), writer='ffmpeg')
+    # reset()
+    # print(f"Animation saved as {filename}")
 
     end_1_time = time.time()
     print(f"Time taken for animation: {end_1_time - start_time:.2f} seconds")
@@ -267,8 +302,8 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
 
 posterior = calculate_probability_by_updating_the_data(data, res=res)
 
-print("Data:", data)
-print("Fraction of heads:", np.mean(data))
+# print("Data:", data)
+print(f"Fraction of heads: {np.sum(data) / len(data):.4f} = {np.mean(data):.4f}")
 
 
 # Calculate mean and asymmetric 1-sigma (left and right) for the posterior
@@ -295,9 +330,28 @@ print(f"Right 1-sigma (p84 - p50): {right_sigma:.4f}")
 # Plot posterior with mean, median, and 1-sigma region
 plt.figure(figsize=(8, 4))
 plt.plot(theta, posterior, label="Posterior")
+plt.plot(x_arr, beta.pdf(x_arr, np.sum(data) + 1, len(data) - np.sum(data) + 1), 'r--', label="Beta Posterior")
 plt.axvline(mean, color='r', linestyle='--', label=f"Mean = {mean:.3f}")
 plt.axvline(p50, color='g', linestyle='--', label=f"Median = {p50:.3f}")
 plt.axvspan(p16, p84, color='orange', alpha=0.3, label="1-sigma region")
+# Calculate median and 1-sigma for Beta posterior
+beta_pdf = beta.pdf(x_arr, np.sum(data) + 1, len(data) - np.sum(data) + 1)
+beta_pdf /= np.trapezoid(beta_pdf, x_arr)
+beta_cdf = np.cumsum(beta_pdf)
+beta_cdf = beta_cdf / beta_cdf[-1]
+beta_p16 = np.interp(0.16, beta_cdf, x_arr)
+beta_p50 = np.interp(0.50, beta_cdf, x_arr)
+beta_p84 = np.interp(0.84, beta_cdf, x_arr)
+beta_left_sigma = beta_p50 - beta_p16
+beta_right_sigma = beta_p84 - beta_p50
+
+plt.axvline(beta_p50, color='purple', linestyle=':', label=f"Beta Median = {beta_p50:.3f}")
+plt.axvspan(beta_p16, beta_p84, color='cyan', alpha=0.2, label="Beta 1-sigma region")
+plt.text(
+    beta_p50, max(beta_pdf)*0.95,
+    f"Beta Median = ${beta_p50:.4f}^{{+{beta_right_sigma:.4f}}}_{{-{beta_left_sigma:.4f}}}$",
+    color='purple', ha='center', va='bottom'
+)
 plt.xlabel("p")
 plt.ylabel("Posterior Probability")
 plt.title("Posterior Distribution with Asymmetric 1-sigma")
