@@ -16,9 +16,10 @@ import time
 from scipy.interpolate import interp1d
 
 start_time = time.time()
+now = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-p_head = 0.70  # Probability of head in a coin flip
+p_head = 0.87  # Probability of head in a coin flip
 n = 10  # Number of samples
 res=0.005  # Resolution for the posterior calculation
 
@@ -33,8 +34,8 @@ data = make_sample_data(p_head, n)
 def calculate_probability_using_batch_method(data):
     def log_prior(p):
         if 0 < p < 1:
-            # return 0
-            return np.log(1 / (p + res))
+            return 0
+            # return np.log(1 / (p + res))
         else:
             return -np.inf
         
@@ -155,7 +156,7 @@ plt.xlabel("p")
 plt.ylabel("Probability Density")
 plt.title("Posterior Distribution: MCMC vs Beta Function")
 plt.legend()
-plt.savefig("check4_mcmc_vs_beta_posterior.png")
+plt.savefig(f"check4_mcmc_vs_beta_posterior_{now}.png")
 plt.show()
 
 print()
@@ -164,8 +165,8 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
     theta = np.arange(0, 1 + res, res)
 
     def set_prior():
-        # prior = np.ones_like(theta) * 1 / len(theta)
-        prior = 1 / (theta + res)
+        prior = np.ones_like(theta) * 1 / len(theta)
+        # prior = 1 / (theta + res)
         # normalized_prior = prior / np.trapezoid(prior, theta)
         # print(f"Normalized prior: {normalized_prior}")
         # return normalized_prior
@@ -295,7 +296,6 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
     frames = [-1] * 20 + get_variable_frames(data)
 
     ani = FuncAnimation(fig, update, frames=frames, blit=False, repeat=False, interval=50)
-    now = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     filename = f"check4_bayes_theorem_animation_{now}.mp4"
     ani.save(filename, writer='ffmpeg')
@@ -374,7 +374,7 @@ plt.text(
 plt.legend()
 end_2_time = time.time()
 print(f"Total Time taken: {end_2_time - start_time:.2f} seconds")
-plt.savefig("check4_posterior_final.png")
+plt.savefig(f"check4_posterior_final_{now}.png")
 plt.show()
 
 
@@ -394,7 +394,7 @@ plt.ylabel("Posterior Probability Density")
 plt.title("Comparison of Posterior Distributions")
 plt.legend()
 plt.tight_layout()
-plt.savefig("check4_comparison_posteriors.png")
+plt.savefig(f"check4_comparison_posteriors_{now}.png")
 plt.show()
 
 # Plot the residual between the two methods
@@ -402,21 +402,43 @@ plt.show()
 
 mcmc_interp = interp1d(hist_centers, hist_vals, kind='linear', bounds_error=False, fill_value=0)
 mcmc_on_theta = mcmc_interp(theta)
-residual = posterior - mcmc_on_theta
+residual = (posterior - mcmc_on_theta)
+
+
+residual = residual / posterior * 100  # Convert to percentage
+
+print("Residual:", residual)
+mask = (np.isnan(residual)) | ((posterior < 0.1) & (mcmc_on_theta < 0.1))
+print("Mask for NaN residuals:", mask)
+
+residual[mask] = 0
+
+print("\n\nResidual statistics:")
+print(f"Mean of residual: {np.mean(residual):.4e}")
+print(f"Variance of residual: {np.var(residual):.4e}")
+print("posterior:", posterior)
+print("mcmc_on_theta:", mcmc_on_theta)
+print("residual:", residual)
+
+# Remove the first and last element of residual and corresponding arrays
+theta = theta[1:-1]
+posterior = posterior[1:-1]
+mcmc_on_theta = mcmc_on_theta[1:-1]
+residual = residual[1:-1]
 
 plt.figure(figsize=(10, 4))
 plt.plot(theta, residual, color='purple')
 # Calculate and plot mean and variance of the residual
 residual_mean = np.mean(residual)
 residual_var = np.var(residual)
-plt.axhline(residual_mean, color='red', linestyle='-', label=f"Mean = {residual_mean:.2e}")
-plt.axhline(residual_mean + residual_var, color='green', linestyle=':', label=f"Mean + Var = {residual_mean + residual_var:.2e}")
-plt.axhline(residual_mean - residual_var, color='green', linestyle=':', label=f"Mean - Var = {residual_mean - residual_var:.2e}")
+plt.axhline(residual_mean, color='red', linestyle='-', label=f"Mean = {residual_mean:.4f}")
+plt.axhline(residual_mean + np.sqrt(residual_var), color='green', linestyle=':', label=f"Mean + 1 Sigma = {residual_mean + np.sqrt(residual_var):.4f}")
+plt.axhline(residual_mean - np.sqrt(residual_var), color='green', linestyle=':', label=f"Mean - 1 Sigma = {residual_mean - np.sqrt(residual_var):.4f}")
 plt.legend()
 plt.axhline(0, color='gray', linestyle='--')
 plt.xlabel("p")
-plt.ylabel("Residual (Bayes Law - MCMC)")
-plt.title("Residual Between Bayes Law and MCMC Posterior")
+plt.ylabel("Residual% (Bayes Law - MCMC)")
+plt.title("Residual% Between Bayes Law and MCMC Posterior")
 plt.tight_layout()
-plt.savefig("check4_residual_posteriors.png")
+plt.savefig(f"check4_residual_percentage_posteriors_{now}.png")
 plt.show()
