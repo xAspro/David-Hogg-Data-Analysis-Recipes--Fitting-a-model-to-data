@@ -20,9 +20,9 @@ start_time = time.time()
 now = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-p_head = 0.87  # Probability of head in a coin flip
+p_head = 0.07  # Probability of head in a coin flip
 n = 1000  # Number of samples
-res=0.001  # Resolution for the posterior calculation
+res=0.0001  # Resolution for the posterior calculation
 
 # method = "uniform" # prior = 1 / (len(theta) + res)  # Uniform prior
 # method = "inverse" # prior = 1 / (theta + res)  # Inverse prior
@@ -221,6 +221,12 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
 
         return posterior
 
+    def compute_full_posterior(data, prior):
+        posterior = prior
+        for new_data in data:
+            posterior = compute_posterior(new_data, posterior)
+        return posterior
+
     fig, ax = plt.subplots()
     # print(f"Initial prior: {prior}")
     # print(f"Initial theta: {theta}")
@@ -335,9 +341,12 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
     ani.save(filename, writer='ffmpeg')
     reset()
 
-    # ani.save(filename.replace('.mp4', '.mov'), writer='ffmpeg')
-    # reset()
-    # print(f"Animation saved as {filename}")
+    ani.save(filename.replace('.mp4', '.mov'), writer='ffmpeg')
+    reset()
+    print(f"Animation saved as {filename}")
+
+    # plt.close(fig)
+    # prior = compute_full_posterior(data, prior)
 
     end_1_time = time.time()
     print(f"Time taken for animation: {end_1_time - start_time:.2f} seconds")
