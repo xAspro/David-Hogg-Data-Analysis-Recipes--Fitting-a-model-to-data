@@ -14,14 +14,25 @@ import sys
 from scipy.stats import beta
 import time
 from scipy.interpolate import interp1d
+import os
 
 start_time = time.time()
 now = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 p_head = 0.87  # Probability of head in a coin flip
-n = 10  # Number of samples
-res=0.005  # Resolution for the posterior calculation
+n = 1000  # Number of samples
+res=0.001  # Resolution for the posterior calculation
+
+# method = "uniform" # prior = 1 / (len(theta) + res)  # Uniform prior
+# method = "inverse" # prior = 1 / (theta + res)  # Inverse prior
+method = "exp_cotangent"  # prior = np.exp(1 / (np.tan(theta * np.pi) + res))  # Exponential cotangent prior
+
+directory = f"check4/{method}_prior/{n}/"
+
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
 
 x_arr = np.arange(0, 1 + res/100, res/100)
 
@@ -34,8 +45,14 @@ data = make_sample_data(p_head, n)
 def calculate_probability_using_batch_method(data):
     def log_prior(p):
         if 0 < p < 1:
-            return 0
-            # return np.log(1 / (p + res))
+            if method == "uniform":
+                return 0
+            elif method == "inverse":
+                return np.log(1 / (p + res))
+            elif method == "exp_cotangent":
+                return np.exp(1 / np.tan(p * np.pi))
+            else:
+                return 0
         else:
             return -np.inf
         
@@ -156,7 +173,7 @@ plt.xlabel("p")
 plt.ylabel("Probability Density")
 plt.title("Posterior Distribution: MCMC vs Beta Function")
 plt.legend()
-plt.savefig(f"check4_mcmc_vs_beta_posterior_{now}.png")
+plt.savefig(f"{directory}check4_mcmc_vs_beta_posterior_{now}.png")
 plt.show()
 
 print()
@@ -165,11 +182,28 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
     theta = np.arange(0, 1 + res, res)
 
     def set_prior():
-        prior = np.ones_like(theta) * 1 / len(theta)
+        if method == "uniform":
+            prior = np.ones_like(theta) * 1 / len(theta)
+        elif method == "inverse":
+            prior = 1 / (theta + res)
+        elif method == "exp_cotangent":
+            prior = np.exp(1 / (np.tan(theta * np.pi)))
         # prior = 1 / (theta + res)
         # normalized_prior = prior / np.trapezoid(prior, theta)
         # print(f"Normalized prior: {normalized_prior}")
         # return normalized_prior
+        mask = prior == np.inf
+        # print(f"Mask: {mask}")
+        # print(f"Prior: {prior}")
+        # print(f"Max prior: {np.nanmax(prior[~mask])}")
+        prior[mask] = 10 * np.nanmax(prior[~mask])  # Replace inf with a large number
+        # print(f"Prior: {prior}")
+
+        # This shouldnt happen, but just in case
+        # As probability can never be -ve
+        # Having it for debugging purposes
+        mask = prior == -np.inf
+        prior[mask] = 10 * np.nanmin(prior)  # Replace -inf with a large number
         return prior
     
     prior = set_prior()
@@ -295,9 +329,9 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
 
     frames = [-1] * 20 + get_variable_frames(data)
 
-    ani = FuncAnimation(fig, update, frames=frames, blit=False, repeat=False, interval=50)
+    ani = FuncAnimation(fig, update, frames=frames, blit=False, repeat=False, interval=5)
 
-    filename = f"check4_bayes_theorem_animation_{now}.mp4"
+    filename = f"{directory}check4_bayes_theorem_animation_{now}.mp4"
     ani.save(filename, writer='ffmpeg')
     reset()
 
@@ -374,7 +408,7 @@ plt.text(
 plt.legend()
 end_2_time = time.time()
 print(f"Total Time taken: {end_2_time - start_time:.2f} seconds")
-plt.savefig(f"check4_posterior_final_{now}.png")
+plt.savefig(f"{directory}check4_posterior_final_{now}.png")
 plt.show()
 
 
@@ -394,7 +428,7 @@ plt.ylabel("Posterior Probability Density")
 plt.title("Comparison of Posterior Distributions")
 plt.legend()
 plt.tight_layout()
-plt.savefig(f"check4_comparison_posteriors_{now}.png")
+plt.savefig(f"{directory}check4_comparison_posteriors_{now}.png")
 plt.show()
 
 # Plot the residual between the two methods
@@ -407,8 +441,14 @@ residual = (posterior - mcmc_on_theta)
 
 residual = residual / posterior * 100  # Convert to percentage
 
+
+residual = np.asarray(residual, dtype=float)
+posterior = np.asarray(posterior, dtype=float)
+mcmc_on_theta = np.asarray(mcmc_on_theta, dtype=float)
+
+
 print("Residual:", residual)
-mask = (np.isnan(residual)) | ((posterior < 0.1) & (mcmc_on_theta < 0.1))
+mask = ((posterior < 0.1) & (mcmc_on_theta < 0.1)) | ((residual == -np.inf) | (residual == np.inf) | (np.isnan(residual)))
 print("Mask for NaN residuals:", mask)
 
 residual[mask] = 0
@@ -440,5 +480,5 @@ plt.xlabel("p")
 plt.ylabel("Residual% (Bayes Law - MCMC)")
 plt.title("Residual% Between Bayes Law and MCMC Posterior")
 plt.tight_layout()
-plt.savefig(f"check4_residual_percentage_posteriors_{now}.png")
+plt.savefig(f"{directory}check4_residual_percentage_posteriors_{now}.png")
 plt.show()
