@@ -19,6 +19,9 @@ import os
 start_time = time.time()
 now = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+# June 10 Update. Got to know, despite the number of data, if the prior is veryyyy bad, 
+# bayesian is not able to handle it. Also, if the prior is tooooo bad, but still on the 
+# good side, then the bayesian part is doing worse:/
 
 p_head = 0.07  # Probability of head in a coin flip
 n = 1000  # Number of samples
