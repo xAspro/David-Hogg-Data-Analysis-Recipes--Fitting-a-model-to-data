@@ -27,7 +27,7 @@ plt.close()
 
 def logprior(params):
     m, b, Pb, Yb, Vb = params
-    if 0 < m < 20 and -20 < b < 20 and 0 < Pb < 1 and 0 < Vb < 1000 :
+    if 0 < m < 2 and -20 < b < 20 and 0 < Pb < 1 and 0 < Vb < 1000 :
         # return -np.log(1 + Pb) - np.log(1 + Vb)  # Log prior for Pb and Vb
         return -np.log(Pb) - np.log(Vb)  # Log prior for Pb and Vb
     return -np.inf
@@ -50,9 +50,9 @@ def logposterior(params, X, Y, sig):
         return -np.inf  # If prior is not satisfied, return -inf
     return lp + loglikelihood(params, X, Y, sig)
 
-def run_mcmc(X, Y, sig, nwalkers=50, nsteps=100000):
+def run_mcmc(X, Y, sig, nwalkers=50, nsteps=10000):
     ndim = 5  # Number of parameters: m, b, Pb, Yb, Vb
-    p0 = np.random.rand(nwalkers, ndim) * [10, 20, 1, 10, 10]  # Initial guess for parameters
+    p0 = np.random.rand(nwalkers, ndim) * [2, 20, 1, 10, 10]  # Initial guess for parameters
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=(X, Y, sig))
     sampler.run_mcmc(p0, nsteps)
@@ -226,7 +226,7 @@ def plot_corner(samples):
 if __name__ == "__main__":
     # Run MCMC
     sampler = run_mcmc(X, Y, sig)
-    DISCARD = 5000  # Number of burn-in samples to discard
+    DISCARD = 1000  # Number of burn-in samples to discard
 
     samples = sampler.get_chain(flat=True, discard=DISCARD)  # Discard burn-in samples and flatten the chain
 
@@ -235,26 +235,26 @@ if __name__ == "__main__":
     gmm_result = plot_corner(samples)
 
 
-    # # Plot chains without discard
-    # fig, axes = plt.subplots(5, 1, figsize=(10, 8), sharex=True)
-    # labels = ['m', 'b', 'Pb', 'Yb', 'Vb']
-    # for i in range(5):
-    #     axes[i].plot(sampler.get_chain()[:, :, i], alpha=0.5)
-    #     axes[i].set_ylabel(labels[i])
-    # axes[-1].set_xlabel("Step number")
-    # fig.suptitle("Chains without discard")
-    # plt.tight_layout()
-    # plt.show()
+    # Plot chains without discard
+    fig, axes = plt.subplots(5, 1, figsize=(10, 8), sharex=True)
+    labels = ['m', 'b', 'Pb', 'Yb', 'Vb']
+    for i in range(5):
+        axes[i].plot(sampler.get_chain()[:, :, i], alpha=0.5)
+        axes[i].set_ylabel(labels[i])
+    axes[-1].set_xlabel("Step number")
+    fig.suptitle("Chains without discard")
+    plt.tight_layout()
+    plt.show()
 
-    # # Plot chains with discard
-    # fig, axes = plt.subplots(5, 1, figsize=(10, 8), sharex=True)
-    # for i in range(5):
-    #     axes[i].plot(sampler.get_chain(discard=DISCARD)[:, :, i], alpha=0.5)
-    #     axes[i].set_ylabel(labels[i])
-    # axes[-1].set_xlabel("Step number")
-    # fig.suptitle(f"Chains with discard={DISCARD}")
-    # plt.tight_layout()
-    # plt.show()
+    # Plot chains with discard
+    fig, axes = plt.subplots(5, 1, figsize=(10, 8), sharex=True)
+    for i in range(5):
+        axes[i].plot(sampler.get_chain(discard=DISCARD)[:, :, i], alpha=0.5)
+        axes[i].set_ylabel(labels[i])
+    axes[-1].set_xlabel("Step number")
+    fig.suptitle(f"Chains with discard={DISCARD}")
+    plt.tight_layout()
+    plt.show()
 
     # Print autocorrelation time and acceptance rate
     try:
