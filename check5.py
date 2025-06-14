@@ -13,6 +13,7 @@ start_time = time.time()
 Y = np.array([1, 2, 3, 42, 5] * 5) 
 sig = np.random.uniform(0, 1, len(Y))  # Adding some noise
 # sig[3] += 1
+sig *= 3
 X = np.arange(len(Y))
 plt.figure(figsize=(8, 6))
 # plt.scatter(X, Y, color='blue', alpha=0.6, label='Data')
@@ -27,7 +28,7 @@ plt.close()
 
 def logprior(params):
     m, b, Pb, Yb, Vb = params
-    if 0 < m < 20 and -20 < b < 20 and 0 < Pb < 1 and 0 < Vb < 1000 :
+    if 0 < m < 2 and -20 < b < 20 and 0 < Pb < 1 and 0 < Vb < 1000 :
         # return -np.log(1 + Pb) - np.log(1 + Vb)  # Log prior for Pb and Vb
         return -np.log(Pb) - np.log(Vb)  # Log prior for Pb and Vb
     return -np.inf
@@ -223,6 +224,24 @@ def plot_corner(samples):
 
 #     return gmm_results
 
+def find_bad_points(params, X, Y, sig):
+    m, b, Pb, Yb, Vb = params
+    model_fg = m * X + b
+    model_bg = Yb
+    residuals_fg = (Y - model_fg) / sig
+    residuals_bg = (Y - model_bg) / np.sqrt(Vb + sig**2)
+
+    # Use a boolean mask to identify bad points
+    mask = Pb * np.exp(-0.5 * residuals_bg**2) > (1 - Pb) * np.exp(-0.5 * residuals_fg**2)
+
+    # Print x and y values for all bad points
+    bad_points = np.column_stack((X[mask], Y[mask]))
+    print("\n\nBad points (x, y):")
+    for x_val, y_val in bad_points:
+        print(f"({x_val}, {y_val})")
+    print("\n\n")
+    return mask
+
 if __name__ == "__main__":
     # Run MCMC
     sampler = run_mcmc(X, Y, sig)
@@ -269,21 +288,27 @@ if __name__ == "__main__":
     # Plot the MAP function and 1-sigma bands
     X_plot = np.linspace(X.min(), X.max(), 100)
     m_mcmc, b_mcmc = np.mean(samples[:, 0]), np.mean(samples[:, 1])
-    y_map = m_mcmc * X_plot + b_mcmc
+    Pb_mcmc, Yb_mcmc, Vb_mcmc = np.mean(samples[:, 2]), np.mean(samples[:, 3]), np.mean(samples[:, 4])
 
     # Compute 1-sigma credible interval for the function
     y_samples = np.array([m * X_plot + b for m, b, Pb, Yb, Vb in samples[np.random.choice(len(samples), 1000)]])
     y_lower = np.percentile(y_samples, 16, axis=0)
+    y_map = np.percentile(y_samples, 50, axis=0) # MAP estimate is considered the median
     y_upper = np.percentile(y_samples, 84, axis=0)
 
     plt.figure(figsize=(8, 6))
-    # plt.scatter(X, Y, color='blue', alpha=0.6, label='Data')
-    plt.errorbar(X, Y, yerr=sig, fmt='o', color='red', label='Error bars', capsize=5, elinewidth=2, markeredgewidth=2)
     plt.plot(X_plot, y_map, color='black', label='MAP fit')
     plt.fill_between(X_plot, y_lower, y_upper, color='gray', alpha=0.3, label='1$\sigma$ interval')
+
+    # Mark bad points using the mean parameters
+    bad_mask = find_bad_points([m_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc], X, Y, sig)
+    plt.errorbar(X[~bad_mask], Y[~bad_mask], yerr=sig[~bad_mask], fmt='o', color='blue', label='Good Points', capsize=5, elinewidth=2, markeredgewidth=2)
+    plt.errorbar(X[bad_mask], Y[bad_mask], yerr=sig[bad_mask], fmt='o', color='red', label='Bad Points', capsize=5, elinewidth=2, markeredgewidth=2)
+    
+
     plt.xlabel('Index')
     plt.ylabel('Value')
-    plt.title('MAP Fit with 1$\sigma$ Interval')
+    plt.title('MAP Fit with 1$\sigma$ Interval and Bad Points')
     plt.legend()
     plt.grid()
     plt.show()
@@ -291,14 +316,16 @@ if __name__ == "__main__":
     # Print summary statistics
     m_mean, b_mean, Pb_mean, Yb_mean, Vb_mean = np.mean(samples, axis=0)
     print(f"Mean parameters:\n  m = {m_mean:.3f}\n  b = {b_mean:.3f}\n  Pb = {Pb_mean:.3f}\n  Yb = {Yb_mean:.3f}\n  Vb = {Vb_mean:.3f}")
-
+    
     # Plot dominant and subdominant curves from GMM means
     plt.figure(figsize=(8, 6))
-    plt.errorbar(X, Y, yerr=sig, fmt='o', color='red', label='Data', capsize=5, elinewidth=2, markeredgewidth=2)
-
-    # Dominant and subdominant means for m and b
+    
+    # Dominant and subdominant means for m, b, Pb, Yb, Vb
     m_dom, m_sub = gmm_result['means'][0]
     b_dom, b_sub = gmm_result['means'][1]
+    Pb_dom, Pb_sub = gmm_result['means'][2]
+    Yb_dom, Yb_sub = gmm_result['means'][3]
+    Vb_dom, Vb_sub = gmm_result['means'][4]
 
     # Plot dominant curve
     y_dom = m_dom * X_plot + b_dom
@@ -308,9 +335,21 @@ if __name__ == "__main__":
     y_sub = m_sub * X_plot + b_sub
     plt.plot(X_plot, y_sub, color='green', lw=2, ls='--', label='Subdominant GMM fit')
 
+    # Mark bad points for dominant model
+    bad_mask_dom = find_bad_points([m_dom, b_dom, Pb_dom, Yb_dom, Vb_dom], X, Y, sig)
+
+    # Mark bad points for subdominant model
+    bad_mask_sub = find_bad_points([m_sub, b_sub, Pb_sub, Yb_sub, Vb_sub], X, Y, sig)
+
+    plt.errorbar(X[~bad_mask_dom], Y[~bad_mask_dom], yerr=sig[~bad_mask_dom], fmt='o', color='blue', label='Good Dominant', capsize=5, elinewidth=2, markeredgewidth=2, alpha=0.7, ms=6, zorder=2)
+    plt.errorbar(X[bad_mask_dom], Y[bad_mask_dom], yerr=sig[bad_mask_dom], fmt='o', color='red', label='Bad Dominant', capsize=5, elinewidth=2, markeredgewidth=2, alpha=0.7, ms=6, zorder=3)
+    plt.errorbar(X[~bad_mask_sub], Y[~bad_mask_sub], yerr=sig[~bad_mask_sub], fmt='^', color='black', label='Good Subdominant', capsize=5, elinewidth=2, markeredgewidth=2, alpha=0.7, ms=3, zorder=4)
+    plt.errorbar(X[bad_mask_sub], Y[bad_mask_sub], yerr=sig[bad_mask_sub], fmt='^', color='green', label='Bad Subdominant', capsize=5, elinewidth=2, markeredgewidth=2, alpha=0.7, ms=3, zorder=5)
+
+
     plt.xlabel('Index')
     plt.ylabel('Value')
-    plt.title('Dominant and Subdominant GMM Fits')
+    plt.title('Dominant and Subdominant GMM Fits with Bad Points')
     plt.legend()
     plt.grid()
     plt.show()
