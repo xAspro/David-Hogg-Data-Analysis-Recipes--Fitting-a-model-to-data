@@ -10,7 +10,7 @@ import time
 
 start_time = time.time()
 
-Y = np.array([1, 2, 3, 42, 5])
+Y = np.array([1, 2, 3, 42, 5] * 5) 
 sig = np.random.uniform(0, 1, len(Y))  # Adding some noise
 # sig[3] += 1
 X = np.arange(len(Y))
@@ -27,7 +27,7 @@ plt.close()
 
 def logprior(params):
     m, b, Pb, Yb, Vb = params
-    if 0 < m < 2 and -20 < b < 20 and 0 < Pb < 1 and 0 < Vb < 1000 :
+    if 0 < m < 20 and -20 < b < 20 and 0 < Pb < 1 and 0 < Vb < 1000 :
         # return -np.log(1 + Pb) - np.log(1 + Vb)  # Log prior for Pb and Vb
         return -np.log(Pb) - np.log(Vb)  # Log prior for Pb and Vb
     return -np.inf
