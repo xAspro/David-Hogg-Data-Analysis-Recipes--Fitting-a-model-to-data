@@ -11,9 +11,9 @@ import time
 start_time = time.time()
 
 Y = np.array([1, 2, 3, 42, 5] * 5) 
-sig = np.random.uniform(0, 1, len(Y))  # Adding some noise
+sig = np.random.uniform(0.5, 1, len(Y))  # Adding some noise
 # sig[3] += 1
-sig *= 3
+# sig *= 3
 X = np.arange(len(Y))
 plt.figure(figsize=(8, 6))
 # plt.scatter(X, Y, color='blue', alpha=0.6, label='Data')
@@ -28,7 +28,7 @@ plt.close()
 
 def logprior(params):
     m, b, Pb, Yb, Vb = params
-    if 0 < m < 2 and -20 < b < 20 and 0 < Pb < 1 and 0 < Vb < 1000 :
+    if -10 < m < 20 and -20 < b < 20 and 0 < Pb < 1 and 0 < Vb < 1000 :
         # return -np.log(1 + Pb) - np.log(1 + Vb)  # Log prior for Pb and Vb
         return -np.log(Pb) - np.log(Vb)  # Log prior for Pb and Vb
     return -np.inf
@@ -51,7 +51,7 @@ def logposterior(params, X, Y, sig):
         return -np.inf  # If prior is not satisfied, return -inf
     return lp + loglikelihood(params, X, Y, sig)
 
-def run_mcmc(X, Y, sig, nwalkers=50, nsteps=10000):
+def run_mcmc(X, Y, sig, nwalkers=50, nsteps=200000):
     ndim = 5  # Number of parameters: m, b, Pb, Yb, Vb
     p0 = np.random.rand(nwalkers, ndim) * [2, 20, 1, 10, 10]  # Initial guess for parameters
 
@@ -245,7 +245,7 @@ def find_bad_points(params, X, Y, sig):
 if __name__ == "__main__":
     # Run MCMC
     sampler = run_mcmc(X, Y, sig)
-    DISCARD = 1000  # Number of burn-in samples to discard
+    DISCARD = 20000  # Number of burn-in samples to discard
 
     samples = sampler.get_chain(flat=True, discard=DISCARD)  # Discard burn-in samples and flatten the chain
 
@@ -350,9 +350,15 @@ if __name__ == "__main__":
     plt.xlabel('Index')
     plt.ylabel('Value')
     plt.title('Dominant and Subdominant GMM Fits with Bad Points')
+    plt.ylim(-10, 100)
     plt.legend()
     plt.grid()
     plt.show()
+
+    print("Dominant GMM parameters:")
+    print(f"  m = {m_dom:.3f}, b = {b_dom:.3f}, Pb = {Pb_dom:.3f}, Yb = {Yb_dom:.3f}, Vb = {Vb_dom:.3f}")
+    print("Subdominant GMM parameters:")
+    print(f"  m = {m_sub:.3f}, b = {b_sub:.3f}, Pb = {Pb_sub:.3f}, Yb = {Yb_sub:.3f}, Vb = {Vb_sub:.3f}")
 
 end_time = time.time()
 print(f"Total execution time: {end_time - start_time:.2f} seconds")
