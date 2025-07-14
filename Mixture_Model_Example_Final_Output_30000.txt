@@ -1,0 +1,17 @@
+Posterior median values:
+m: 2.7705
+b: -2.5670
+Pb: 0.9189
+Yb: 2.5028
+Vb: 0.3143
+
+MAP (maximum a posteriori) values:
+m: 0.0641
+b: 1.7869
+Pb: 0.5275
+Yb: 2.7753
+Vb: 0.1169
+
+Bad point probabilities:
+[0.6811268  0.89036058 0.99459029 1.         0.99999815 0.99939734
+ 0.99997192 0.82932842]
