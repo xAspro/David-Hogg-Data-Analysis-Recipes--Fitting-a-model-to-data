@@ -1,4 +1,12 @@
+"""
+This script tries to look at the use of Gaussian Mixture Models (GMM)
+to analyze MCMC samples from a Bayesian linear regression with outliers.
 
+This is only to understand how GMM could be used for my project. 
+This is not part of David Hogg's Data Analysis Recipes.
+
+But in the end, GMM was not employed in my thesis work.
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import emcee
@@ -56,7 +64,7 @@ def run_mcmc(X, Y, sig, nwalkers=50, nsteps=200000):
     p0 = np.random.rand(nwalkers, ndim) * [2, 20, 1, 10, 10]  # Initial guess for parameters
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=(X, Y, sig))
-    sampler.run_mcmc(p0, nsteps)
+    sampler.run_mcmc(p0, nsteps, progress=True)
 
     return sampler
 

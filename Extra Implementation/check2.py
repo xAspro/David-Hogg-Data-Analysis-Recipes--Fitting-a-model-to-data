@@ -1,7 +1,10 @@
 """
-This file is to check if my understanding of this idea shown in David Hogg, is compatible with my project in hand.
+This script tries to look at fitting for a curve, when the data in different 
+regions have different variances, and also has a systematic shift in it's value.
 
-In this code, initially, I will try to look at the change with sigy in segments. Later I will also think of what will happen if b itself is changed.
+However, note that, this shift is just a linear shift (+b) in the y-values.
+
+This is an extension to `check1.py` where only the variance was different in different segments.
 """
 
 import numpy as np
@@ -9,12 +12,11 @@ import matplotlib.pyplot as plt
 import emcee
 import corner
 
+import time
 
-# def function(x, parameters):
-#     """
-#     Polynomial function in x.
-#     """
-#     return np.polyval(parameters, x)
+start_time = time.time()
+
+
 
 def function(M, parameters):
     log_phi_star = parameters[0]
@@ -22,50 +24,10 @@ def function(M, parameters):
     alpha = parameters[2]
     beta = parameters[3]
 
-    # print(f"phi_star = {phi_star}")
-    # print(f"M_star = {M_star}")
-    # print(f"alpha = {alpha}")
-    # print(f"beta = {beta}")
-    # print(f'M = {M}')
-    # print()
-
-    # import sys
-    # sys.exit("Check the function")
-
-    # Debugging: Print intermediate values
-    term1 = 10**(0.4 * (alpha + 1) * (M - M_star))
-    term2 = 10**(0.4 * (beta + 1) * (M - M_star))
-    # print(f"M = {M}, term1 = {term1}, term2 = {term2}")
-
-    # # Check for overflow
-    # if np.isinf(term1).any() or np.isinf(term2).any():
-    #     print("Overflow detected in term1 or term2!")
-
-    #     if np.isinf(term1).any():
-    #         print("term1 overflowed")
-    #         print(f'alpha = {alpha}, M = {M}, M_star = {M_star}')
-    #         print(f'alpha + 1 = {alpha + 1}')
-    #         print(f'M - M_star = {M - M_star}')
-    #         print(f'(0.4 * (alpha + 1) * (M - M_star)) = {0.4 * (alpha + 1) * (M - M_star)}')
-    #         print(f'10**(0.4 * (alpha + 1) * (M - M_star)) = {term1}')
-
-    #     if np.isinf(term2).any():
-    #         print("term2 overflowed")
-    #         print(f'beta = {beta}, M = {M}, M_star = {M_star}')
-    #         print(f'beta + 1 = {beta + 1}')
-    #         print(f'M - M_star = {M - M_star}')
-    #         print(f'(0.4 * (beta + 1) * (M - M_star)) = {0.4 * (beta + 1) * (M - M_star)}')
-    #         print(f'10**(0.4 * (beta + 1) * (M - M_star)) = {term2}')
-
-    #     import sys
-    #     sys.exit("Overflow detected in term1 or term2!")
-
-
-
     return log_phi_star - np.log10((10**(0.4 * (alpha + 1) * (M- M_star)) + 10**(0.4 * (beta + 1) * (M - M_star))))
 
 
-def make_data(n_data_points, xmin, xmax, n_segments, sigy_min, sigy_max, parameters):
+def make_data(n_data_points, xmin, xmax, n_segments, sigy_min, sigy_max, b_max, parameters):
     """
     Create data with a linear model and add noise.
     """
@@ -89,6 +51,14 @@ def make_data(n_data_points, xmin, xmax, n_segments, sigy_min, sigy_max, paramet
     print(f"sigy = {sigy}")
     print(f"sigy^2 = {sigy**2}")
 
+    b = np.random.uniform(-b_max, b_max, n_segments)
+
+    bi = np.concatenate([np.full(len(segment), b_val) for segment, b_val in zip(segments, b)])
+    print(f"b = {b}")
+
+    import time
+    time.sleep(5)
+
     # # Print the segments
     # cnt = 0
     # for i, segment in enumerate(segments):
@@ -99,51 +69,53 @@ def make_data(n_data_points, xmin, xmax, n_segments, sigy_min, sigy_max, paramet
     #     print()
 
     y = function(x, parameters)
-    y += np.random.normal(0, sigyi, size=x.shape)
+    y += np.random.normal(0, sigyi, size=x.shape) + bi
 
-    plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename='check1_orignal_data')
-    return x, y, sigy, segments, NUM
+    plot_data(x, y, parameters, xmin, xmax, sigy, b, segments, filename='check2_orignal_data')
+    return x, y, sigy, b, segments, NUM
 
 def logprior(params, NUM):
     """
     Calculate the log prior probability of the parameters.
     """
     parameters = params[:NUM]
-    sigyi2 = params[NUM:]
-
-    # # Uniform prior for m and b
-    # if not (-100 < m < 100 and -2000 < b < 2000):
-    #     return -np.inf
-
-    # if parameters[0] < 0 or parameters[0] > 1:
-    #     return -np.inf
-
-    # if parameters[0] >= 0:
-    #     return -np.inf
-
-    # if not np.all((-50 < parameters) & (parameters < 1)):
-    #     return -np.inf
+    sigyi2, b = np.split(params[NUM:], 2)
 
     min = [-14.0, -32.0, -7.0, -10.0]
-    max = [-1.0, -15.0, 0.0, 15.0]
+    max = [-1.0, -15.0, 0.0, 0.0]
 
     # # Get the current time in milliseconds
-    # import time
+    # # import time
     # current_time = time.time()
-    # milliseconds = int((current_time * 100000) % 100000)
+    # rarity = 10000
+    # milliseconds = int((current_time * rarity)) % rarity
 
     # # Check if the millisecond component is exactly 0
     # if milliseconds == 0:
-    #     print(f"min = {min}")
+    #     print(f"\n\nmin = {min}")
     #     print(f"max = {max}")
     #     print(f"parameters = {parameters}")
+    # #     print(f"parameters = {parameters}")
 
     if not np.all((min < parameters) & (parameters < max)):
+        # return -np.inf
         return -np.inf
 
     # Uniform prior for sigyi2
-    if not np.all((0 < sigyi2) & (sigyi2 < 30000)):
+    if not np.all((0 < sigyi2)):
         return -np.inf
+    
+    if not np.all(sigyi2 < 25):
+        # print(f"\n\nsigyi2 = {sigyi2}")
+        # print(f'returning -1000 - np.sum(abs(sigyi2)): {-1000 - np.sum(abs(sigyi2))}')
+
+        return -1000 - np.sum(abs(sigyi2))
+    
+    if not np.all((-3 < b) & (b < 3)):
+        # return -np.inf
+        # print(f"\nb = {b}")
+        # print(f'returning -1000 - np.sum(abs(b)): {-1000 - np.sum(abs(b))}')
+        return -1000 - np.sum(abs(b))
 
     return 0.0
 
@@ -153,14 +125,14 @@ def loglikelihood(params, NUM, xi, yi):
     """
     # Unpack the parameters
     parameters = params[:NUM]
-    sigyi2 = params[NUM:]
+    sigyi2, b = np.split(params[NUM:], 2)
 
     if len(sigyi2) != len(xi):
         import time
         time.sleep(2)
         raise ValueError("Length of sigyi2 must match length of xi")
 
-    sum = np.sum(np-0.5 * (((yi - (function(x, parameters)))**2 / sigyi2) + np.log(2 * np.pi * sigyi2)))
+    sum = np.sum(np-0.5 * (((yi - function(x, parameters) - b)**2 / sigyi2) + np.log(2 * np.pi * sigyi2)))
 
     if np.isfinite(sum):
         return sum
@@ -184,7 +156,7 @@ def logposterior_segments(params, NUM, xi, yi, segments):
 
     # Unpack the parameters
     parameters = params[:NUM]
-    sigyi2 = params[NUM:]
+    sigyi2, b = np.split(params[NUM:], 2)
 
     # Check if the number of segments matches the number of sigyi2 values
     if len(sigyi2) != len(segments):
@@ -203,31 +175,37 @@ def logposterior_segments(params, NUM, xi, yi, segments):
         sigyi2_segment = sigyi2[i]
 
         # Calculate the log likelihood for the current segment
-        ll += np.sum(-0.5 * (((yi_segment - function(segments[i], parameters))**2 / sigyi2_segment) + np.log(2 * np.pi * sigyi2_segment)))
+        ll += np.sum(-0.5 * (((yi_segment - function(segments[i], parameters) - b[i])**2 / sigyi2_segment) + np.log(2 * np.pi * sigyi2_segment)))
 
         # Update the lower end for the next segment
         lower_end = upper_end
 
-    return (lp + ll) / np.log10(np.e)
+    return (lp + 10 * ll)
 
 
-def run_mcmc(x, y, NUM, segments, nwalkers=2000, n_burn=10, n_prod=2000):
+def run_mcmc(x, y, NUM, segments, nwalkers=100, n_burn=200, n_prod=500):
     """
     Run MCMC to fit the data.
     """
+
+    # print("Inside run_mcmc")
     N = len(segments)
+    # print(f"Number of segments: {N}")
 
-
-    min = [-14.0, -32.0, -7.0, -10.0]
-    max = [-1.0, -15.0, 0.0, 15.0]
+    min = np.array([-14.0, -32.0, -7.0, -10.0])
+    max = np.array([-1.0, -15.0, 0.0, 15.0])
     # Set up the initial position of the walkers
-    p0 = np.random.rand(nwalkers, NUM + N)
+    p0 = np.random.rand(nwalkers, NUM + 2 * N)
     # p0[:, :NUM] = np.random.uniform(-20, 0, (nwalkers, NUM)) 
-    p0[:, :NUM] = np.random.uniform(min, max, (nwalkers, NUM))  # parameters
-    p0[:, NUM:] = np.random.uniform(1, 3000, (nwalkers, N))  # sigyi2
+    # p0[:, :NUM] = np.random.uniform(np.maximum(min / 2, min * 2), np.minimum(max / 2, max * 2), (nwalkers, NUM))  # parameters
+    p0[:, 0] = np.random.uniform(-7.8, -5.7, nwalkers)  # log10phi
+    p0[:, 1] = np.random.uniform(-27.5, -25.4, nwalkers)  # M_star
+    p0[:, 2] = np.random.uniform(-5.8, -3.7, nwalkers)  # alpha
+    p0[:, 3] = np.random.uniform(-2.8, -0.7, nwalkers)  # beta
+    p0[:, NUM:] = np.random.uniform(1, 5, (nwalkers, 2 * N))  # sigyi2
 
     # Set up the MCMC sampler
-    sampler = emcee.EnsembleSampler(nwalkers, NUM + N, logposterior_segments, args=(NUM, x, y, segments))
+    sampler = emcee.EnsembleSampler(nwalkers, NUM + 2 * N, logposterior_segments, args=(NUM, x, y, segments))
 
     # Run the burn-in phase
     sampler.run_mcmc(p0, n_burn, progress=True)
@@ -244,9 +222,9 @@ def find_MAP(sampler, N, NUM):
     after marginalising over the variance parameters.
     """
 
-    print("In find_MAP")
+    # print("In find_MAP")
     samples = sampler.get_chain(flat=True)
-    print(f"Number of samples: {len(samples)}")
+    # print(f"Number of samples: {len(samples)}")
 
     # Extract the first 4 parameters from the samples
     samples_reduced = samples[:, :4]
@@ -271,30 +249,31 @@ def find_MAP(sampler, N, NUM):
     return param_values
 
 
-def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
-    print("Inside plot_data")
+def plot_data(x, y, parameters, xmin, xmax, sigy, b, segments, filename=None):
+    # print("Inside plot_data")
 
     x_dif = xmax - xmin
     y_dif = np.max(y) - np.min(y)
 
-    print(f'xmin = {xmin}, xmax = {xmax}')
-    print(f'np.min(y) = {np.min(y)}, np.max(y) = {np.max(y)}')
-    print(f'x_dif = {x_dif}')
-    print(f'y_dif = {y_dif}')
-    print()
-    print()
-    print()
-    print()
-    print()
-    print()
-    print()
+    # print(f'xmin = {xmin}, xmax = {xmax}')
+    # print(f'np.min(y) = {np.min(y)}, np.max(y) = {np.max(y)}')
+    # print(f'x_dif = {x_dif}')
+    # print(f'y_dif = {y_dif}')
+    # print()
+    # print()
+    # print()
+    # print()
+    # print()
+    # print()
+    # print()
     # import time
     # time.sleep(10)
 
-    bin_count = 10
+    bin_count = 500
 
     # Create a 2D color plot for the Gaussian function with uncertainty for each segment
-    X, Y = np.meshgrid(np.linspace(xmin - 0.1 * x_dif, xmax + 0.1 * x_dif, bin_count), np.linspace(np.min(y) - 0.1 * y_dif, np.max(y) + 0.1 * y_dif, bin_count))
+    X, Y = np.meshgrid(np.linspace(xmin - 0.1 * x_dif, xmax + 0.1 * x_dif, bin_count), 
+                       np.linspace(np.min(y) - 0.1 * y_dif - np.max(b), np.max(y) + 0.1 * y_dif + np.max(b), bin_count))
     Z = np.zeros_like(X)
 
 
@@ -308,7 +287,7 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
 
         # Create a mask for the smoothed range
         mask = (X >= prev_end) & (X <= next_start)
-        Z[mask] += np.exp(-0.5 * ((Y[mask] - function(X[mask], parameters)) / sigy[i])**2)
+        Z[mask] += np.exp(-0.5 * ((Y[mask] - function(X[mask], parameters) - b[i]) / sigy[i])**2)
 
     x_arr = np.unique(X)
 
@@ -316,7 +295,7 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
     Z /= np.max(Z)
 
     # Define contour levels for 90%, 50%, and 10%
-    contour_levels = [0.1, 0.5, 0.9]
+    contour_levels = [0.01, 0.1, 0.5, 0.9]
 
 
     # Plot the color map
@@ -325,8 +304,8 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
     plt.colorbar(contourf, label='Gaussian Value')
 
     # Add contours for specific levels
-    contours = plt.contour(X, Y, Z, levels=contour_levels, colors=['red', 'blue', 'white'], linewidths=1.5)
-    plt.clabel(contours, inline=True, fontsize=6, fmt={0.1: '10%', 0.5: '50%', 0.9: '90%'})
+    contours = plt.contour(X, Y, Z, levels=contour_levels, colors=['green', 'red', 'blue', 'white'], linewidths=1.5)
+    plt.clabel(contours, inline=True, fontsize=6, fmt={0.01: '1%', 0.1: '10%', 0.5: '50%', 0.9: '90%'})
 
 
 
@@ -350,9 +329,13 @@ def plot_data(x, y, parameters, xmin, xmax, sigy, segments, filename=None):
 # parameters = (2, 3, 100)
 parameters = (-6.77, -26.48, -4.72, -1.70)
 xrange = (-31, -19)
+b_max = 1
 
 try:
-    x, y, sigy, segments, NUM = make_data(999, *xrange, 3, 1, 5, parameters)
+    # x, y, sigy, b, segments, NUM = make_data(99, *xrange, 2, 1, 2, b_max, parameters)
+    x, y, sigy, b, segments, NUM = make_data(9999, *xrange, 5, 0.1, 2, 2, parameters)
+    # import sys
+    # sys.exit(0)
 
     sampler = run_mcmc(x, y, NUM, segments)
 except Exception as e:
@@ -370,8 +353,10 @@ for i in range(len(param_names)):
     print(f'parameter_{i+1} = {parameters[i]:.2f}')
 
 # Extract the samples for each parameter
-param_names = param_names + [f"sigyi2_{i+1}" for i in range(len(segments))]
+param_names = param_names + [f"sigyi2_{i+1}" for i in range(len(segments))] + [f"b_{i+1}" for i in range(len(segments))]
 results = {}
+
+q50_parameters = []
 
 for i, param in enumerate(param_names):
     # Get the samples for the current parameter
@@ -379,7 +364,8 @@ for i, param in enumerate(param_names):
     
     # Compute the 16th, 50th (median), and 84th percentiles
     q16, q50, q84 = np.percentile(param_samples, [16, 50, 84])
-    
+    q50_parameters.append(q50)
+
     # Compute the uncertainties
     err_minus = q50 - q16
     err_plus = q84 - q50
@@ -395,13 +381,27 @@ for i, param in enumerate(param_names):
     print(f"{param} = {q50:.2f} +{err_plus:.2f} -{err_minus:.2f}")
 
 # Plot the results
-labels = param_names
 fig = plt.figure(figsize=(8, 8), dpi=100, tight_layout=True)
-corner.corner(samples, labels=labels, fig=fig, show_titles=True, bins=30)
-plt.savefig('check1_corner.png', bbox_inches='tight')
-plt.savefig('check1_corner.pdf', bbox_inches='tight')
+corner.corner(samples, labels=param_names, fig=fig, show_titles=True, bins=30)
+plt.savefig('check2_corner.png', bbox_inches='tight')
+plt.savefig('check2_corner.pdf', bbox_inches='tight')
 plt.show(block=False)
-print("Corner plot saved as check1_corner.png and check1_corner.pdf")
+print("Corner plot saved as check2_corner.png and check2_corner.pdf")
+
+# Plot the chains for each parameter
+fig, axes = plt.subplots(len(param_names), figsize=(10, 2 * len(param_names)), sharex=True)
+for i, param in enumerate(param_names):
+    ax = axes[i]
+    for walker in sampler.get_chain()[:, :, i].T:
+        ax.plot(walker, alpha=0.5)
+    ax.set_ylabel(param)
+    ax.set_xlabel("Step")
+    ax.set_title(f"Chain for {param}")
+plt.tight_layout()
+plt.savefig('check2_chains.png', bbox_inches='tight')
+plt.savefig('check2_chains.pdf', bbox_inches='tight')
+plt.show(block=False)
+print("Chains plot saved as check2_chains.png and check2_chains.pdf")
 
 # Plot the chains for each parameter
 fig, axes = plt.subplots(len(param_names), figsize=(10, 2 * len(param_names)), sharex=True)
@@ -412,11 +412,105 @@ for i, param in enumerate(param_names):
     ax.set_xlabel("Step")
     ax.set_title(f"Chain for {param}")
 plt.tight_layout()
-plt.savefig('check1_chains.png', bbox_inches='tight')
-plt.savefig('check1_chains.pdf', bbox_inches='tight')
+plt.savefig('check2_chains.png', bbox_inches='tight')
+plt.savefig('check2_chains.pdf', bbox_inches='tight')
 plt.show(block=False)
-print("Chains plot saved as check1_chains.png and check1_chains.pdf")
+print("Chains plot saved as check2_chains.png and check2_chains.pdf")
+
+
+print(f"\n\n\nBest-fit parameters: {q50_parameters}\n\n\n")
+plot_data(x, y, q50_parameters, *xrange, sigy=sigy, b=b, segments=segments, filename='check2_guessed_soln_1')
 
 # Extract the best-fit parameters (mean of the posterior samples)
 parameters_fit = find_MAP(sampler, len(segments), NUM)
-plot_data(x, y, parameters_fit, *xrange, sigy=sigy, segments=segments, filename='check1_guessed_soln')
+print(f"\n\n\nBest-fit parameters: {parameters_fit}\n\n\n")
+plot_data(x, y, parameters_fit, *xrange, sigy=sigy, b=b, segments=segments, filename='check2_guessed_soln_2')
+
+# Arrange the known and best-fit parameters side by side
+labels = ["log10phi", "M_star", "alpha", "beta"]
+print("\nComparison of Known and Best-Fit Parameters:")
+print(f"{'Parameter':<10} {'Known':<15} {'Best-Fit':<15}")
+print("-" * 40)
+for i, label in enumerate(labels):
+    known = parameters[i]
+    best_fit = parameters_fit[i]
+    print(f"{label:<10} {known:<15.2f} {best_fit:<15.2f}")
+
+print("\n\n\n")
+print("Acceptance fraction:", sampler.acceptance_fraction)
+
+# Check autocorrelation time
+try:
+    print("Autocorrelation time:", sampler.get_autocorr_time())
+except Exception as e:
+    print("Error calculating autocorrelation time:", e)
+print("\n\n\n")
+
+end_time_1 = time.time()
+time_taken = end_time_1 - start_time
+print("Time taken:", time.strftime("%H:%M:%S", time.gmtime(time_taken)))
+
+plt.close('all')
+
+from sklearn.mixture import GaussianMixture
+
+parameters_fit = []
+
+# Select the samples for the parameter of interest
+for i in range(NUM):
+    param_samples = samples[:, i] 
+
+    n_components_range = range(1, 3)  
+    bics = []
+    gmm_models = []
+
+    for n_components in n_components_range:
+        gmm = GaussianMixture(n_components=n_components, random_state=42)
+        gmm.fit(param_samples.reshape(-1, 1))
+        bics.append(gmm.bic(param_samples.reshape(-1, 1)))  # Store the BIC
+        gmm_models.append(gmm)  # Store the model
+
+    # Select the model with the lowest BIC
+    best_n_components = n_components_range[np.argmin(bics)]
+    best_gmm = gmm_models[np.argmin(bics)]
+
+    print(f"Best number of components: {best_n_components}")
+
+    # Predict the cluster for each sample
+    labels = best_gmm.predict(param_samples.reshape(-1, 1))
+
+    # Separate the samples into clusters
+    clusters = [param_samples[labels == k] for k in range(best_n_components)]
+
+    # Plot the histogram for each cluster
+    plt.figure(figsize=(8, 6))
+    for k, cluster in enumerate(clusters):
+        plt.hist(cluster, bins=30, alpha=0.5, label=f"Cluster {k+1}")
+    plt.legend()
+    plt.xlabel("Parameter Value")
+    plt.ylabel("Frequency")
+    plt.title(f"Distribution with {best_n_components} Components")
+    plt.show()
+
+    # Compute statistics for each cluster
+    for k, cluster in enumerate(clusters):
+        q16, q50, q84 = np.percentile(cluster, [16, 50, 84])
+        print(f"Cluster {k+1}: {q50:.2f} +{q84 - q50:.2f} -{q50 - q16:.2f}")
+
+    # Find the dominant cluster (the one with the most samples)
+    dominant_cluster = max(clusters, key=len)
+
+    # Compute the 50th percentile (median) of the dominant cluster
+    dominant_median = np.percentile(dominant_cluster, 50)
+    parameters_fit.append(dominant_median)
+
+    print(f"Most dominant cluster has {len(dominant_cluster)} samples.")
+    print(f"50th percentile (median) of the dominant cluster: {dominant_median:.2f}")
+
+
+plot_data(x, y, parameters_fit, *xrange, sigy=sigy, b=b, segments=segments, filename='check2_guessed_soln_3')
+
+end_time_2 = time.time()
+time_taken = end_time_2 - start_time
+print("Time taken:", time.strftime("%H:%M:%S", time.gmtime(time_taken)))
+print()

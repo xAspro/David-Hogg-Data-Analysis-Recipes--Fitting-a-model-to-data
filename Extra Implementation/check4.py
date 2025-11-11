@@ -2,6 +2,11 @@
 Extra code, not part of David Hogg.
 This code is to learn Bayesian statistics using MCMC,
 and look at its counterpart, that is by updating the data.
+And also, how closely is prior selection affects the posterior.
+
+This script compares the two methods for a coin flip problem,
+essentially a bernoulli trial with probability of head = p_head.
+While also trying to look at how different priors affect the posterior.
 """
 
 import numpy as np
@@ -22,14 +27,25 @@ now = datetime.now().strftime("%Y%m%d_%H%M%S")
 # June 10 Update. Got to know, despite the number of data, if the prior is veryyyy bad, 
 # bayesian is not able to handle it. Also, if the prior is tooooo bad, but still on the 
 # good side, then the bayesian part is doing worse:/
+# These discrepancies are because of the finite resolution of the grids and the steepness 
+# of the priors at the edges.
 
-p_head = 0.07  # Probability of head in a coin flip
+# Try playing with different values for the setup
+# For example, n = 10, 100, 500, 1000, 10000, 100000 
+# p_head = 0.07, 0.5, 0.9
+# And choose res accordingly, to capture the posterior well enough
+
+p_head = 0.7  # Probability of head in a coin flip
 n = 1000  # Number of samples
-res=0.0001  # Resolution for the posterior calculation
+res=0.005  # Resolution for the posterior calculation
 
-# method = "uniform" # prior = 1 / (len(theta) + res)  # Uniform prior
+
+# Check these three different priors to understand their effect on the posterior
+# along with different setups of n and p_head
+
+method = "uniform" # prior = 1 / (len(theta) + res)  # Uniform prior
 # method = "inverse" # prior = 1 / (theta + res)  # Inverse prior
-method = "exp_cotangent"  # prior = np.exp(1 / (np.tan(theta * np.pi) + res))  # Exponential cotangent prior
+# method = "exp_cotangent"  # prior = np.exp(1 / (np.tan(theta * np.pi) + res))  # Exponential cotangent prior
 
 directory = f"check4/{method}_prior/{n}/"
 
@@ -84,44 +100,6 @@ def calculate_probability_using_batch_method(data):
 
         # Plot chains (no discard), each walker in a different color
         n_steps, n_walkers, ndim = all_samples.shape
-
-        # plt.figure(figsize=(10, 4))
-        # for i in range(n_walkers):
-        #     plt.plot(all_samples[:, i, 0], alpha=0.7, label=f"Walker {i+1}" if n_walkers <= 10 else None)
-        # if n_walkers <= 10:
-        #     plt.legend()
-        # plt.title("Chains (no discard)")
-        # plt.xlabel("Step")
-        # plt.ylabel("p")
-        # plt.show()
-
-        # # Plot corner (no discard)
-        # try:
-        #     corner.corner(all_samples.reshape(-1, all_samples.shape[-1]), labels=["p"], show_titles=True)
-        #     plt.suptitle("Corner plot (no discard)")
-        #     plt.show()
-        # except ImportError:
-        #     print("corner package not installed, skipping corner plot.")
-
-        # # Plot chains (with burn-in discarded)
-        # plt.figure(figsize=(10, 4))
-        # for i in range(n_walkers):
-        #     plt.plot(samples[:, i, 0], alpha=0.7, label=f"Walker {i+1}" if n_walkers <= 10 else None)
-        # if n_walkers <= 10:
-        #     plt.legend()
-        # plt.title("chains after burn-in")
-        # plt.xlabel("steps")
-        # plt.ylabel("p")
-        # plt.show()
-
-
-        # # Plot corner (with burn-in discarded)
-        # try:
-        #     corner.corner(samples.reshape(-1, samples.shape[-1]), labels=["p"], show_titles=True)
-        #     plt.suptitle("Corner plot (after burn-in)")
-        #     plt.show()
-        # except ImportError:
-        #     print("corner package not installed, skipping corner plot.")
 
         return samples
 
@@ -191,16 +169,10 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
             prior = 1 / (theta + res)
         elif method == "exp_cotangent":
             prior = np.exp(1 / (np.tan(theta * np.pi)))
-        # prior = 1 / (theta + res)
-        # normalized_prior = prior / np.trapezoid(prior, theta)
-        # print(f"Normalized prior: {normalized_prior}")
-        # return normalized_prior
+            
         mask = prior == np.inf
-        # print(f"Mask: {mask}")
-        # print(f"Prior: {prior}")
-        # print(f"Max prior: {np.nanmax(prior[~mask])}")
+        
         prior[mask] = 10 * np.nanmax(prior[~mask])  # Replace inf with a large number
-        # print(f"Prior: {prior}")
 
         # This shouldnt happen, but just in case
         # As probability can never be -ve
@@ -224,11 +196,11 @@ def calculate_probability_by_updating_the_data(data, res=0.001):
 
         return posterior
 
-    def compute_full_posterior(data, prior):
-        posterior = prior
-        for new_data in data:
-            posterior = compute_posterior(new_data, posterior)
-        return posterior
+    # def compute_full_posterior(data, prior):
+    #     posterior = prior
+    #     for new_data in data:
+    #         posterior = compute_posterior(new_data, posterior)
+    #     return posterior
 
     fig, ax = plt.subplots()
     # print(f"Initial prior: {prior}")
