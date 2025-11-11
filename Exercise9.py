@@ -1,9 +1,15 @@
-# """
-# Reproducing the Figure 4 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
+"""
+Reproducing the Figure 6 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-# Considering all the data points for a linear fit
+Comparing the Mixture model with only the good data points and its uncertainties and 
+the same with its uncertainties halved.
 
-# """
+This shows how important the uncertainties. Even those are important and integral part of the data.
+However, that doesnt mean that increasing the uncertainties arbitrarily will give better results.
+Better result depends on how well we understand the data, not better looking plot!
+In case, the orignal uncertainties were small and increasing it gives us 'better results' 
+(the exact opposite scenario of what we have in this exercise), then also we cant arbitrarily change the data.
+"""
 
 
 
@@ -95,57 +101,6 @@ def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
 
     return sampler
 
-################################################################################################################################################
-# Marginalisation is not required. Because even histogram is compressing the joint probability distribution into just the required parameters.
-################################################################################################################################################
-
-# def marginalisation(samples, params_to_marginalise=[2, 3, 4], target_params=[0, 1], n_bins=100):
-#     """
-#     Marginalise the samples over the specified parameters and calculate the MAP value for the target parameters.
-#     """
-#     # Check if params_to_marginalise is a list or a single parameter
-#     if not isinstance(params_to_marginalise, list):
-#         params_to_marginalise = [params_to_marginalise]
-
-#     # Marginalize over the specified parameters (sum over them)
-#     marginalised_samples = np.sum(samples[:, params_to_marginalise], axis=1)
-
-#     # Create a new array with the remaining parameters (target_params)
-#     reduced_samples = samples[:, target_params]
-
-#     # Create a histogram of the reduced samples
-#     hist, edges = np.histogram(reduced_samples[:, 0], bins=n_bins, density=True)
-
-#     # Calculate the bin centers
-#     bin_centers = 0.5 * (edges[1:] + edges[:-1])
-
-#     # Normalize the histogram
-#     hist /= np.sum(hist)
-
-#     # Find the MAP value (bin center with the highest density)
-#     map_index = np.argmax(hist)  # Index of the maximum value in the histogram
-#     map_value = bin_centers[map_index]  # Corresponding bin center
-
-#     return bin_centers, hist, map_value
-
-# def plot_marginalisation(samples, params_to_marginalise=[2,3,4], target_params=[0,1], n_bins=100):
-#     """
-#     Plot the marginalisation of the samples over the specified parameters.
-#     """
-#     bin_centers, hist, map_value = marginalisation(samples, params_to_marginalise, target_params, n_bins)
-
-
-#     print(f"MAP value for target parameter {target_params}: {map_value}")
-#     print()
-    
-#     plt.figure(figsize=(8, 5))
-#     plt.plot(bin_centers, hist, label=f"Marginalisation over parameter {params_to_marginalise}")
-#     plt.axvline(map_value, color='red', linestyle='--', label=f"MAP = {map_value:.2f}")
-#     plt.xlabel(f"Parameter {params_to_marginalise}")
-#     plt.ylabel("Density")
-#     plt.title(f"Marginalisation of Parameter {params_to_marginalise}")
-#     plt.legend()
-#     plt.show()
 
 def plot_results(part, samples):
     """

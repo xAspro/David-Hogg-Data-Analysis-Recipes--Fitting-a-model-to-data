@@ -1,7 +1,7 @@
 """
 Reproducing the Figure 4 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Considering all the data points for a linear fit
+Considering all the data points for a linear fit with outliers
 
 """
 
@@ -38,10 +38,7 @@ def loglikelihood(params, xi, yi, sigyi):
     """
     # Unpack the parameters
     m, b, Pb, Yb, Vb = params
-    if Pb < 0 or Pb > 1:
-        return -np.inf
-    if Vb <= 0:
-        return -np.inf
+
     return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
 
 def logposterior(params, xi, yi, sigyi):
@@ -62,11 +59,11 @@ def run_mcmc(xi, yi, sigyi, nwalkers=100, nsteps_burn=200, nsteps_prod=2000):
 
     p0 = np.empty((nwalkers, 5))
 
-    p0[:, 0] = np.random.uniform(0, 2, size=nwalkers)   # m
-    p0[:, 1] = np.random.uniform(0, 200, size=nwalkers) # b
-    p0[:, 2] = np.random.uniform(0, 0.1, size=nwalkers)    # Pb
-    p0[:, 3] = np.random.uniform(0, 200, size=nwalkers) # Yb
-    p0[:, 4] = np.random.uniform(0, 100, size=nwalkers)   # Vb
+    p0[:, 0] = np.random.uniform(0, 2, size=nwalkers)       # m
+    p0[:, 1] = np.random.uniform(0, 200, size=nwalkers)     # b
+    p0[:, 2] = np.random.uniform(0, 0.1, size=nwalkers)     # Pb
+    p0[:, 3] = np.random.uniform(0, 200, size=nwalkers)     # Yb
+    p0[:, 4] = np.random.uniform(0, 100, size=nwalkers)     # Vb
 
     # Create the sampler
     sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=(xi, yi, sigyi))
@@ -80,57 +77,10 @@ def run_mcmc(xi, yi, sigyi, nwalkers=100, nsteps_burn=200, nsteps_prod=2000):
 
     return sampler
 
-################################################################################################################################################
-# Marginalisation is not required. Because even histogram is compressing the joint probability distribution into just the required parameters.
-################################################################################################################################################
-
-# def marginalisation(samples, params_to_marginalise=[2, 3, 4], target_params=[0, 1], n_bins=100):
-#     """
-#     Marginalise the samples over the specified parameters and calculate the MAP value for the target parameters.
-#     """
-#     # Check if params_to_marginalise is a list or a single parameter
-#     if not isinstance(params_to_marginalise, list):
-#         params_to_marginalise = [params_to_marginalise]
-
-#     # Marginalize over the specified parameters (sum over them)
-#     marginalised_samples = np.sum(samples[:, params_to_marginalise], axis=1)
-
-#     # Create a new array with the remaining parameters (target_params)
-#     reduced_samples = samples[:, target_params]
-
-#     # Create a histogram of the reduced samples
-#     hist, edges = np.histogram(reduced_samples[:, 0], bins=n_bins, density=True)
-
-#     # Calculate the bin centers
-#     bin_centers = 0.5 * (edges[1:] + edges[:-1])
-
-#     # Normalize the histogram
-#     hist /= np.sum(hist)
-
-#     # Find the MAP value (bin center with the highest density)
-#     map_index = np.argmax(hist)  # Index of the maximum value in the histogram
-#     map_value = bin_centers[map_index]  # Corresponding bin center
-
-#     return bin_centers, hist, map_value
-
-# def plot_marginalisation(samples, params_to_marginalise=[2,3,4], target_params=[0,1], n_bins=100):
-#     """
-#     Plot the marginalisation of the samples over the specified parameters.
-#     """
-#     bin_centers, hist, map_value = marginalisation(samples, params_to_marginalise, target_params, n_bins)
-
-
-#     print(f"MAP value for target parameter {target_params}: {map_value}")
-#     print()
-    
-#     plt.figure(figsize=(8, 5))
-#     plt.plot(bin_centers, hist, label=f"Marginalisation over parameter {params_to_marginalise}")
-#     plt.axvline(map_value, color='red', linestyle='--', label=f"MAP = {map_value:.2f}")
-#     plt.xlabel(f"Parameter {params_to_marginalise}")
-#     plt.ylabel("Density")
-#     plt.title(f"Marginalisation of Parameter {params_to_marginalise}")
-#     plt.legend()
-#     plt.show()
+#############################################################################################
+# Explicit Marginalisation is not required. Because even histogram is compressing the 
+# joint probability distribution into just the required parameters.
+#############################################################################################
 
 def plot_results(samples):
     """
@@ -203,10 +153,6 @@ def plot_fit_with_samples(x, y, sigy, samples, n_samples_to_plot=10):
         y_sample = m * x_plot + b
         plt.plot(x_plot, y_sample, color='gray', alpha=0.1)
 
-    # # Plot the best-fit line (mean or MAP)
-    # m_best = np.mean(samples[:, 0])  # or use MAP
-    # b_best = np.mean(samples[:, 1])
-    # y_best = m_best * x_plot + b_best
 
     # Plot the best-fit line (MAP)
     H, xedges, yedges = np.histogram2d(samples[:,1], samples[:,0], bins=500)
@@ -253,7 +199,7 @@ def plot_fit_with_confidence_band(x, y, sigy, samples, x_plot=None):
     plt.fill_between(x_plot, lower_3, upper_3, color='blue', alpha=0.07, label='±3σ region')
     plt.xlabel("x")
     plt.ylabel("y")
-    plt.title("Line fit with ±1σ confidence band")
+    plt.title("Line fit with (±1, ±2, ±3)σ confidence band")
     plt.legend()
     plt.savefig('Exercise6_fit_with_confidence_band.png', bbox_inches='tight')
     plt.savefig('Exercise6_fit_with_confidence_band.pdf', bbox_inches='tight')
@@ -267,7 +213,6 @@ def main():
 
     samples = sampler.get_chain(flat=True)
 
-    # Plot the results
     
     # Plot the results
     plot_results(samples)

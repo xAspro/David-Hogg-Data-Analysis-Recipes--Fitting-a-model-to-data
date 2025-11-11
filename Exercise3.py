@@ -24,36 +24,23 @@ x = x[4:].reshape(-1, 1)
 y = y[4:].reshape(-1, 1)
 sigy = sigy[4:]
 
-# print(id)
-# print(x)
-# print(y)
-# print(sigy)
 
 A = np.hstack((np.ones_like(x), x, x**2))
-# print("A = ", A)
 C = np.diag(sigy**2)
 C_inv = np.linalg.inv(C)
 
 cov_matrix = np.linalg.inv(A.T @ C_inv @ A)
-# print(cov_matrix)
 
 def fit_curve(A, C_inv, cov_matrix, y):
     X = cov_matrix @ A.T@ C_inv @ y
-    # print("X = ", X)
     return X
 
 # Fit the curve
 # Unpack the returned array directly
 b, m, q = fit_curve(A, C_inv, cov_matrix, y).flatten()
 
-# print("b = ", b)
-# print("m = ", m)
-# print("q = ", q)
 
 db, dm, dq = np.sqrt(np.diag(cov_matrix))
-# print("db = ", db)
-# print("dm = ", dm)
-# print("dq = ", dq)
 
 
 # Print the equation
