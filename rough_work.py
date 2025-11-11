@@ -1,3 +1,13 @@
+"""
+This is an implementation of fitting a double power law function to a data
+with bad data points using MCMC method. This script also identifies the bad data points,
+and marks them in the final plot. 
+
+Note: These bad points are already downweighted during the MCMC run. Hence, one shouldnt 
+remove them once again. The final plot downweights them automatically, but doesnt remove them.
+Whcih means, they are still an integral part of the data, but have less influence on the fit.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import corner
@@ -69,7 +79,7 @@ def create_data(num_good_points=100, num_bad_points=10):
     # plt.show()
     # import sys
     # sys.exit(0)
-    plt.savefig(f"summa_real_data_plot_{current_time}.png") 
+    plt.savefig(f"rough_work_real_data_plot_{current_time}.png") 
     plt.close()
 
     x_combined = np.concatenate((x_good, x_bad))
@@ -421,7 +431,7 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
     fig = plt.figure(figsize=(12, 8), dpi=100)
     # corner.corner(samples, labels=["m", "c", "Pb", "Yb", "Vb"], fig=fig, show_titles=True, quantiles=[0.16, 0.5, 0.84])
     corner.corner(samples, labels=["logphi", "M_star", "alpha", "beta", "Pb", "Yb", "Vb"], fig=fig, show_titles=True, quantiles=[0.16, 0.5, 0.84])
-    plt.savefig(f"summa_corner_plot_3_{current_time}.png")  # Save the corner plot as a PNG file with the current time
+    plt.savefig(f"rough_work_corner_plot_3_{current_time}.png")  # Save the corner plot as a PNG file with the current time
     # plt.show()
     plt.close()
 
@@ -434,7 +444,7 @@ def mcmc_2_main(data, nwalkers=50, nprod=1000, nburn=1000, NUM=2):
         ax.yaxis.set_label_coords(-0.1, 0.5)
 
     plt.xlabel("step number")
-    plt.savefig(f"summa_chain_plot_3_{current_time}.png")  # Save the chain plot as a PNG file with the current time
+    plt.savefig(f"rough_work_chain_plot_3_{current_time}.png")  # Save the chain plot as a PNG file with the current time
     plt.close()
 
     # Print acceptance rate
@@ -563,7 +573,7 @@ x_arr = np.linspace(-31, -19, 1000)
 # plt.ylim(-10, 410)
 # plt.legend()
 # plt.grid()
-# plt.savefig(f"summa_plot_1_{current_time}.png")  # Save the plot as a PNG file with the current time
+# plt.savefig(f"rough_work_plot_1_{current_time}.png")  # Save the plot as a PNG file with the current time
 # plt.show()
 # plt.close()
 
@@ -595,7 +605,7 @@ plt.xlim(-19, -31)
 # plt.ylim(-14, -2)
 plt.legend()
 plt.grid()
-plt.savefig(f"summa_plot_2_{current_time}.png")  # Save the plot as a PNG file with the current time
+plt.savefig(f"rough_work_plot_2_{current_time}.png")  # Save the plot as a PNG file with the current time
 
 
 end_time = datetime.datetime.now()
