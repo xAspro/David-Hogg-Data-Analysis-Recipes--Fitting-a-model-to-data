@@ -18,12 +18,13 @@ x = np.array([201, 244, 47, 287, 203, 58, 210, 202, 198, 158, 165, 201, 157, 131
 y = np.array([592, 401, 583, 402, 495, 173, 479, 504, 510, 416, 393, 442, 317, 311, 400, 337, 423, 334, 533, 344])
 sigy = np.array([61, 25, 38, 15, 21, 15, 27, 14, 30, 16, 14, 25, 52, 16, 34, 31, 42, 26, 16, 22])
 sigx = np.array([9, 4, 11, 7, 5, 9, 4, 4, 11, 7, 5, 5, 5, 6, 6, 5, 9, 8, 6, 5])
-rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, -0.69, 0.30, -0.46, -0.03, 0.50, 0.73, -0.52, 0.90, 0.40, -0.78, -0.56])
+rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, 
+                  -0.69, 0.30, -0.46, -0.03, 0.50, 0.73, -0.52, 0.90, 0.40, -0.78, -0.56])
 
 
 def logprior(params):
     m, b, Pb, Yb, Vb = params
-    if 0 <= Pb <= 1 and Vb > 0:
+    if 0 <= Pb < 1 and Vb > 0:
         if 0 <= m <= 5 and -200 <= b <= 200 and 0 <= Yb <= 1000:
             return -np.log(1 + Pb) - np.log(1 + Vb)  # Prior for m, b, Pb, Yb, Vb
     return -np.inf  # Reject everything else
@@ -34,12 +35,14 @@ def loglikelihood(params, xi, yi, sigyi):
     """
     Calculate the log likelihood of the data given the model parameters and noise parameters.
     The likelihood is calculated using the formula:
-    Li = (1 - Pb) / sqrt(sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + Pb / sqrt(Vb + sigyi**2) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
+    Li = (1 - Pb) / sqrt(sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
+        Pb / sqrt(Vb + sigyi**2) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
     """
     # Unpack the parameters
     m, b, Pb, Yb, Vb = params
 
-    return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
+    return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
+                         Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
 
 def logposterior(params, xi, yi, sigyi):
     lp = logprior(params)
@@ -255,10 +258,9 @@ def main():
     (lower, upper)                                   # Vb
     ]
 
-
-    # corner.corner(samples, labels=["m", "b"], truths=[m, c], bins=50, smooth=1.0, show_titles=True)
-    # corner.corner(samples[mask], labels=["m", "b", "Pb", "Yb", "Vb"], quantiles=[0.16, 0.5, 0.84], bins=250, fig=plt.figure(figsize=(12, 7)))
-    corner.corner(samples, labels=["m", "b", "Pb", "Yb", "Vb"], range=ranges, quantiles=[0.16, 0.5, 0.84], bins=250, fig=plt.figure(figsize=(12, 7)), show_titles=True)
+    corner.corner(samples, labels=["m", "b", "Pb", "Yb", "Vb"], range=ranges, 
+                  quantiles=[0.16, 0.5, 0.84], bins=250, 
+                  fig=plt.figure(figsize=(12, 7)), show_titles=True)
     plt.savefig('Exercise6_corner.png', bbox_inches='tight')
     plt.savefig('Exercise6_corner.pdf', bbox_inches='tight')
     plt.show()

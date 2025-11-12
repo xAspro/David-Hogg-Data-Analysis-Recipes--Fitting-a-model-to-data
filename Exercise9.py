@@ -4,11 +4,12 @@ Reproducing the Figure 6 in David Hogg's paper "Data analysis recipes: Fitting a
 Comparing the Mixture model with only the good data points and its uncertainties and 
 the same with its uncertainties halved.
 
-This shows how important the uncertainties. Even those are important and integral part of the data.
+This shows how important the uncertainties are, and are an important and integral part of the data.
 However, that doesnt mean that increasing the uncertainties arbitrarily will give better results.
-Better result depends on how well we understand the data, not better looking plot!
+Better result depends on how well we understand the data, not on better looking plots!
 In case, the orignal uncertainties were small and increasing it gives us 'better results' 
-(the exact opposite scenario of what we have in this exercise), then also we cant arbitrarily change the data.
+(the exact opposite scenario of what we have in this exercise), then also we cant arbitrarily change 
+the data, unless there is some reasoning to it.
 """
 
 
@@ -16,6 +17,7 @@ In case, the orignal uncertainties were small and increasing it gives us 'better
 import matplotlib.pyplot as plt
 import numpy as np
 import emcee
+import corner
 
 
 # Data
@@ -24,7 +26,8 @@ x = np.array([201, 244, 47, 287, 203, 58, 210, 202, 198, 158, 165, 201, 157, 131
 y = np.array([592, 401, 583, 402, 495, 173, 479, 504, 510, 416, 393, 442, 317, 311, 400, 337, 423, 334, 533, 344])
 sigy = np.array([61, 25, 38, 15, 21, 15, 27, 14, 30, 16, 14, 25, 52, 16, 34, 31, 42, 26, 16, 22])
 sigx = np.array([9, 4, 11, 7, 5, 9, 4, 4, 11, 7, 5, 5, 5, 6, 6, 5, 9, 8, 6, 5])
-rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, -0.69, 0.30, -0.46, -0.03, 0.50, 0.73, -0.52, 0.90, 0.40, -0.78, -0.56])
+rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, 
+                  -0.69, 0.30, -0.46, -0.03, 0.50, 0.73, -0.52, 0.90, 0.40, -0.78, -0.56])
 
 x = x[4:]
 y = y[4:]
@@ -32,7 +35,7 @@ sigy = sigy[4:]
 
 def logprior(params):
     m, b, Pb, Yb, Vb = params
-    if 0 <= Pb <= 1 and Vb > 0:
+    if 0 <= Pb < 1 and Vb > 0:
         if 0 <= m <= 5 and -200 <= b <= 200 and 0 <= Yb <= 1000:
             return -np.log(1 + Pb) - np.log(1 + Vb)  # Prior for m, b, Pb, Yb, Vb
     return -np.inf  # Reject everything else
@@ -43,27 +46,15 @@ def loglikelihood(params, xi, yi, sigyi):
     """
     Calculate the log likelihood of the data given the model parameters and noise parameters.
     The likelihood is calculated using the formula:
-    Li = (1 - Pb) / sqrt(sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + Pb / sqrt(Vb + sigyi**2) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
+    Li = (1 - Pb) / sqrt(sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) 
+        + Pb / sqrt(Vb + sigyi**2) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
     """
     # Unpack the parameters
     m, b, Pb, Yb, Vb = params
-    # Check if Pb is between 0 and 1
-    if Pb < 0 or Pb > 1:
-        # print("Pb is not between 0 and 1")
-        return -np.inf
-        # return 0
-    # Check if Vb is positive
-    if Vb <= 0:
-        # print("Vb is not positive")
-        return -np.inf
-        # return 0
-    # Check if sigyi is positive
-    if np.any(sigyi <= 0):
-        print("sigyi is not positive")
-        return -np.inf
-        # return 0
-    # Calculate the likelihood
-    return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
+    
+    return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * 
+                         np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
+                         Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
 
 def logposterior(params, xi, yi, sigyi):
     lp = logprior(params)
@@ -73,7 +64,7 @@ def logposterior(params, xi, yi, sigyi):
     return lp + loglikelihood(params, xi, yi, sigyi) 
 
 
-def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
+def run_mcmc(xi, yi, sigyi, nwalkers=200, nsteps_burn=500, nsteps_prod=1000):
     """
     Run the MCMC simulation using emcee.
     """
@@ -116,6 +107,39 @@ def plot_results(part, samples):
     print("MAP of b:", b_map)
     print()
 
+    m_med = np.median(samples[:,0])
+    b_med = np.median(samples[:,1])
+    print("Median of m:", m_med)
+    print("Median of b:", b_med)
+    print()
+
+    # Compute medians and 1-sigma intervals (16th/84th percentiles)
+    m_samps = samples[:, 0]
+    b_samps = samples[:, 1]
+    
+    m_p16, m_p84 = np.percentile(m_samps, [16, 84])
+    b_p16, b_p84 = np.percentile(b_samps, [16, 84])
+    m_minus, m_plus = m_map - m_p16, m_p84 - m_map
+    b_minus, b_plus = b_map - b_p16, b_p84 - b_map
+
+    print("MAP Estimates with asymmetric uncertainties:")
+    print(f"m = {m_map:.4f} +{m_plus:.4f} -{m_minus:.4f}")
+    print(f"b = {b_map:.4f} +{b_plus:.4f} -{b_minus:.4f}")
+
+    print()
+
+    print("Median Estimates with symmetric uncertainties:")
+    print("m = {:.4f} ± {:.4f}".format(m_med, (m_p84 - m_p16)/2))
+    print("b = {:.4f} ± {:.4f}".format(b_med, (b_p84 - b_p16)/2))
+
+
+    # Annotate the 2D plot: marker at median and asymmetric 1-sigma error bars
+    plt.errorbar(b_map, m_map,
+                 xerr=np.array([[b_minus], [b_plus]]),
+                 yerr=np.array([[m_minus], [m_plus]]),
+                 fmt='o', color='red', ecolor='red', elinewidth=1.5, capsize=4, label='Median ±1σ')
+    plt.scatter([b_map], [m_map], color='red', s=30)
+
     H_normalized = H / np.max(H)
     plt.pcolormesh(xedges, yedges, H_normalized.T, cmap="Greys")
 
@@ -142,11 +166,12 @@ def plot_results(part, samples):
         str = 'Using correct data uncertainties'
     else:
         str = 'Using data uncertainties / 2'
-    plt.text(0.5, 0.9, str, transform=plt.gca().transAxes, fontsize=12, ha='center', va='center', bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="white"))
+    plt.text(0.5, 0.9, str, transform=plt.gca().transAxes, fontsize=12, ha='center', 
+             va='center', bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="white"))
     plt.colorbar(label="Normalized Density")
     plt.savefig(f'Exercise9_{part}_histogram.png', bbox_inches='tight')
     plt.savefig(f'Exercise9_{part}_histogram.pdf', bbox_inches='tight')
-    plt.show()
+    # plt.show()
     return samples
 
 
@@ -161,7 +186,7 @@ def plot_chains(sampler):
         ax.plot(samples[:, :, i], "k", alpha=0.3)
         ax.set_ylabel(labels[i])
     axes[-1].set_xlabel("Step number")
-    plt.show()
+    # plt.show()
 
 
 def plot_fit_with_samples(x, y, sigy, part, samples, n_samples_to_plot=10):
@@ -191,8 +216,33 @@ def plot_fit_with_samples(x, y, sigy, part, samples, n_samples_to_plot=10):
     plt.legend()
     plt.savefig(f'Exercise9_{part}_fit.png', bbox_inches='tight')
     plt.savefig(f'Exercise9_{part}_fit.pdf', bbox_inches='tight')
-    plt.show()
+    # plt.show()
 
+
+def matrix_method(x, y, sigy):
+    """
+    Perform linear regression using the matrix method.
+    """
+    x = x.reshape(-1, 1)
+    y = y.reshape(-1, 1)
+
+    A = np.hstack((np.ones_like(x), x))
+    C = np.diag(sigy**2)
+    C_inv = np.linalg.inv(C)
+
+    cov_matrix = np.linalg.inv(A.T @ C_inv @ A)
+
+    def fit_curve(A, C_inv, cov_matrix, y):
+        X = cov_matrix @ A.T@ C_inv @ y
+        return X
+    
+    b, m = fit_curve(A, C_inv, cov_matrix, y).flatten()
+
+    db, dm = np.sqrt(np.diag(cov_matrix))
+
+    print(f"\ny = ({m:.2f} ± {dm:.2f})x + ({b:.2f} ± {db:.2f})\n")
+
+    return b, m, db, dm, cov_matrix
 
 
 def run_calculation(x, y, sigy, part):
@@ -201,7 +251,6 @@ def run_calculation(x, y, sigy, part):
 
     plot_results(part, samples)
 
-    import corner
     Vb = samples[:, 4]
 
     if part == 'a':
@@ -221,10 +270,12 @@ def run_calculation(x, y, sigy, part):
     (lower, upper)                                   # Vb
     ]
 
-    corner.corner(samples, labels=["m", "b", "Pb", "Yb", "Vb"], range=ranges, quantiles=[0.16, 0.5, 0.84], bins=250, fig=plt.figure(figsize=(12, 7)), show_titles=True)
+    corner.corner(samples, labels=["m", "b", "Pb", "Yb", "Vb"], range=ranges, 
+                  quantiles=[0.16, 0.5, 0.84], bins=250, 
+                  fig=plt.figure(figsize=(12, 7)), show_titles=True)
     plt.savefig(f'Exercise9_{part}_corner.png', bbox_inches='tight')
     plt.savefig(f'Exercise9_{part}_corner.pdf', bbox_inches='tight')
-    plt.show()
+    # plt.show()
 
     # print("Exiting the program...")
     # import sys
@@ -235,7 +286,14 @@ def run_calculation(x, y, sigy, part):
 
 def main():
     run_calculation(x, y, sigy, "a")
+    matrix_method(x, y, sigy)
     run_calculation(x, y, sigy / 2, "b")
+    matrix_method(x, y, sigy / 2)
+    
+    print("\nFor the current example, the median statistics is almost exactly "
+          "the same as the matrix uncertainties, provided that the the model has only "
+          "one mode. When the uncertainty is reduced by half, the solution is multimodal, "
+          "and hence the values dont match very well for that case.\n")
 
 
 if __name__ == "__main__":
