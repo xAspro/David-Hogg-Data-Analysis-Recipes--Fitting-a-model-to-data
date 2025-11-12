@@ -1,9 +1,8 @@
-# """
-# Reproducing the Figure 1 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
+"""
+Reproducing the Figure 7 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-# Not considering the first 4 data points which deviate a lot from the rest of the data points
-
-# """
+Fitting the data without the outliers, and with same uncertainty for all data points.
+"""
 
 
 
@@ -74,7 +73,9 @@ def plot():
     plt.ylim(12, 16)
     plt.savefig('Exercise11_chi_squared_vs_S_zoomed.png', dpi=300)
     plt.savefig('Exercise11_chi_squared_vs_S_zoomed.pdf', dpi=300)
-    plt.show()
+
+
+    print("\nThe plots are stored as 'Exercise11_chi_squared_vs_S.png/pdf' and 'Exercise11_chi_squared_vs_S_zoomed.png/pdf'\n")
 
 
 if __name__ == "__main__":

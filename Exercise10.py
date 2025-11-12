@@ -1,11 +1,6 @@
-# """
-# Reproducing the Figure 1 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
-
-# Not considering the first 4 data points which deviate a lot from the rest of the data points
-
-# """
-
-
+"""
+Comparing the chi square value for full data set, and the data set without the outliers
+"""
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -8,7 +8,7 @@ import corner
 id = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])
 x = np.array([201, 244, 47, 287, 203, 58, 210, 202, 198, 158, 165, 201, 157, 131, 166, 160, 186, 125, 218, 146])
 y = np.array([592, 401, 583, 402, 495, 173, 479, 504, 510, 416, 393, 442, 317, 311, 400, 337, 423, 334, 533, 344])
-# assuming sigyi are the same for all points
+# assuming sigy are the same for all points
 # sigy = np.array([61, 25, 38, 15, 21, 15, 27, 14, 30, 16, 14, 25, 52, 16, 34, 31, 42, 26, 16, 22])
 sigx = np.array([9, 4, 11, 7, 5, 9, 4, 4, 11, 7, 5, 5, 5, 6, 6, 5, 9, 8, 6, 5])
 rhoxy = np.array([-0.84, 0.31, 0.64, -0.27, -0.33, 0.67, -0.02, -0.05, -0.84, 
@@ -22,8 +22,8 @@ y = y[4:]
 
 
 def logprior(params):
-    m, b, sigyi2 = params
-    if 0 <= m <= 5 and -200 <= b <= 200 and 0 < sigyi2:
+    m, b, sigy2 = params
+    if 0 <= m <= 5 and -200 <= b <= 200 and 0 < sigy2:
         return 0
     return -np.inf
 
@@ -33,8 +33,8 @@ def loglikelihood(params, xi, yi):
     Calculate the log likelihood of the data given the model parameters and noise parameters.
     """
     # Unpack the parameters
-    m, b, sigyi2 = params
-    return np.sum(-0.5 * (((yi - (m * xi + b))**2 / sigyi2) + np.log(2 * np.pi * sigyi2)))
+    m, b, sigy2 = params
+    return np.sum(-0.5 * (((yi - (m * xi + b))**2 / sigy2) + np.log(2 * np.pi * sigy2)))
 
 def logposterior(params, xi, yi):
     lp = logprior(params)
@@ -47,12 +47,12 @@ def logposterior(params, xi, yi):
     
     return lp + ll
 
-def run_mcmc(x, y, nwalkers=800, n_burn=200, n_prod=500):
+def run_mcmc(x, y, nwalkers=100, n_burn=200, n_prod=1500):
     # Set up the initial position of the walkers
     p0 = np.random.rand(nwalkers, 3)
     p0[:, 0] = np.random.uniform(0, 5, nwalkers)  # m
     p0[:, 1] = np.random.uniform(-200, 200, nwalkers)  # b
-    p0[:, 2] = np.random.uniform(1, 3000, nwalkers)  # sigyi2
+    p0[:, 2] = np.random.uniform(1, 3000, nwalkers)  # sigy2
 
     # Set up the MCMC sampler
     sampler = emcee.EnsembleSampler(nwalkers, 3, logposterior, args=(x, y))
@@ -69,32 +69,32 @@ def run_mcmc(x, y, nwalkers=800, n_burn=200, n_prod=500):
     print("Maximum Likelihood Parameters:")
     print(f"m = {max_likelihood_params[0]:.2f}")
     print(f"b = {max_likelihood_params[1]:.2f}")
-    print(f"sigyi = {np.sqrt(max_likelihood_params[2]):.2f}")
+    print(f"sigy = {np.sqrt(max_likelihood_params[2]):.2f}")
 
     return sampler
 
 def plot_results(sampler, x, y):
     # Plot the results
-    fig = corner.corner(sampler.flatchain, labels=["m", "b", "sigyi^2"])
+    fig = corner.corner(sampler.flatchain, labels=["m", "b", "sigy^2"])
     plt.show()
 
     # Find the index of the maximum log posterior probability
     max_index = np.argmax(sampler.flatlnprobability)
 
-    # Retrieve the corresponding parameters (m, b, sigyi^2)
+    # Retrieve the corresponding parameters (m, b, sigy^2)
     max_likelihood_params = sampler.flatchain[max_index]
-    m_ml, b_ml, sigyi2_ml = max_likelihood_params
+    m_ml, b_ml, sigy2_ml = max_likelihood_params
 
     # Print the maximum likelihood parameters
     print("Maximum Likelihood Parameters:")
     print(f"m = {m_ml:.2f}")
     print(f"b = {b_ml:.2f}")
-    print(f"sigyi = {np.sqrt(sigyi2_ml):.2f}")
+    print(f"sigy = {np.sqrt(sigy2_ml):.2f}")
 
-    label1 = f"y = {m_ml:.2f}x + {b_ml:.2f}\n√S = {np.sqrt(sigyi2_ml):.2f}"
+    label1 = f"y = {m_ml:.2f}x + {b_ml:.2f}\n√S = {np.sqrt(sigy2_ml):.2f}"
 
 
-    plt.errorbar(x, y, yerr=np.sqrt(sigyi2_ml), fmt='o', capsize=3, capthick=2, label='Data')
+    plt.errorbar(x, y, yerr=np.sqrt(sigy2_ml), fmt='o', capsize=3, capthick=2, ecolor='blue', label='Errorbar (from ML S)')
 
     x_plot = np.linspace(0, 300, 100)
     y_plot = m_ml * x_plot + b_ml
@@ -104,6 +104,7 @@ def plot_results(sampler, x, y):
     plt.ylabel('y')
     plt.xlim(0, 300)
     plt.ylim(0, 700)
+    plt.legend()
 
     plt.savefig('Exercise12_part_1.png', bbox_inches='tight')
     plt.savefig('Exercise12_part_1.pdf', bbox_inches='tight')
@@ -122,15 +123,15 @@ def plot_results(sampler, x, y):
 
     label2 = f"y = {m_map:.2f}x + {b_map:.2f}\n"
 
-    H2, sigyi2_edges = np.histogram(sampler.flatchain[:, 2], bins=500, density=True)
+    H2, sigy2_edges = np.histogram(sampler.flatchain[:, 2], bins=500, density=True)
 
-    sig_map = sigyi2_edges[np.argmax(H2)]
-    print("MAP of sigyi:", np.sqrt(sig_map))
+    sig_map = sigy2_edges[np.argmax(H2)]
+    print("MAP of sigy:", np.sqrt(sig_map))
 
     label2 += f"√S = {np.sqrt(sig_map):.2f}"
 
 
-    plt.errorbar(x, y, yerr=np.sqrt(sig_map), fmt='o', capsize=3, capthick=2)
+    plt.errorbar(x, y, yerr=np.sqrt(sig_map), fmt='o', capsize=3, capthick=2, ecolor='red', label='Errorbar (from MAP S)')
     x_plot = np.linspace(0, 300, 100)
     y_plot = m_map * x_plot + b_map
     plt.plot(x_plot, y_plot)
@@ -139,6 +140,8 @@ def plot_results(sampler, x, y):
     plt.ylabel('y')
     plt.xlim(0, 300)
     plt.ylim(0, 700)
+    plt.legend()
+
     plt.savefig('Exercise12_part_2.png', bbox_inches='tight')
     plt.savefig('Exercise12_part_2.pdf', bbox_inches='tight')
     plt.show()

@@ -35,14 +35,30 @@ def loglikelihood(params, xi, yi, sigyi):
     """
     Calculate the log likelihood of the data given the model parameters and noise parameters.
     The likelihood is calculated using the formula:
-    Li = (1 - Pb) / sqrt(sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
-        Pb / sqrt(Vb + sigyi**2) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
+    Li = (1 - Pb) / sqrt(2 * pi * sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
+        Pb / sqrt(2 * pi * (Vb + sigyi**2)) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
+
+    We are also utilising the logaddexp function to avoid runtime overflow and underflow errors. 
+    It does not stop the execution of the code, however, this prevents any overflow or underflow.
     """
     # Unpack the parameters
     m, b, Pb, Yb, Vb = params
+
+
+    term1 = np.log(1 - Pb) - 0.5 * np.log(2 * np.pi * sigyi**2) - 0.5 * ((yi - (m * xi + b)) / sigyi)**2
+    term2 = np.log(Pb) - 0.5 * np.log(2 * np.pi * (Vb + sigyi**2)) - 0.5 * ((yi - Yb)**2 / (Vb + sigyi**2))
+
+    logpos = np.sum(np.logaddexp(term1, term2))
+
+    return logpos
+
+    # return np.sum(np.log((1 - Pb) / np.sqrt(2 * np.pi * sigyi**2) * 
+    #                      np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) 
+    #                      + Pb / np.sqrt(2 * np.pi * (Vb + sigyi**2)) * 
+    #                      np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
+
+
     
-    return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) 
-                         + Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
 
 def logposterior(params, xi, yi, sigyi):
     lp = logprior(params)
@@ -61,11 +77,11 @@ def run_mcmc(xi, yi, sigyi, nwalkers=2000, nsteps_burn=200, nsteps_prod=1000):
 
     p0 = np.empty((nwalkers, 5))
 
-    p0[:, 0] = np.random.uniform(0, 2, size=nwalkers)   # m
-    p0[:, 1] = np.random.uniform(0, 200, size=nwalkers) # b
-    p0[:, 2] = np.random.uniform(0, 0.1, size=nwalkers)    # Pb
-    p0[:, 3] = np.random.uniform(0, 200, size=nwalkers) # Yb
-    p0[:, 4] = np.random.uniform(0, 100, size=nwalkers)   # Vb
+    p0[:, 0] = np.random.uniform(0, 2, size=nwalkers)       # m
+    p0[:, 1] = np.random.uniform(0, 200, size=nwalkers)     # b
+    p0[:, 2] = np.random.uniform(0, 0.1, size=nwalkers)     # Pb
+    p0[:, 3] = np.random.uniform(0, 200, size=nwalkers)     # Yb
+    p0[:, 4] = np.random.uniform(0, 100, size=nwalkers)     # Vb
 
     # Create the sampler
     sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=(xi, yi, sigyi))

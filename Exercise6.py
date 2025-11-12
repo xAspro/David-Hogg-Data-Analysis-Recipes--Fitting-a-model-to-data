@@ -35,14 +35,16 @@ def loglikelihood(params, xi, yi, sigyi):
     """
     Calculate the log likelihood of the data given the model parameters and noise parameters.
     The likelihood is calculated using the formula:
-    Li = (1 - Pb) / sqrt(sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
-        Pb / sqrt(Vb + sigyi**2) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
+    Li = (1 - Pb) / sqrt(2 * pi * sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
+        Pb / sqrt(2 * pi * (Vb + sigyi**2)) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
     """
     # Unpack the parameters
     m, b, Pb, Yb, Vb = params
 
-    return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
-                         Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
+    return np.sum(np.log((1 - Pb) / np.sqrt(2 * np.pi * sigyi**2) * 
+                         np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
+                         Pb / np.sqrt(2 * np.pi * (Vb + sigyi**2)) * 
+                         np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
 
 def logposterior(params, xi, yi, sigyi):
     lp = logprior(params)

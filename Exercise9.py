@@ -5,11 +5,11 @@ Comparing the Mixture model with only the good data points and its uncertainties
 the same with its uncertainties halved.
 
 This shows how important the uncertainties are, and are an important and integral part of the data.
-However, that doesnt mean that increasing the uncertainties arbitrarily will give better results.
-Better result depends on how well we understand the data, not on better looking plots!
-In case, the orignal uncertainties were small and increasing it gives us 'better results' 
-(the exact opposite scenario of what we have in this exercise), then also we cant arbitrarily change 
-the data, unless there is some reasoning to it.
+The uncertainties capture how much we trust the data points. Along with that, our mixture model adds 
+a bit more trustworthiness to the analysis. That is by introducing Pb. In the first case, we have 
+removed the outliers and Pb is almost 0. But when we reduce the uncertainties, Pb increases, meaning
+that even after removing the outliers, our model still thinks there are outliers in the data.
+Which is true for this case. 
 """
 
 
@@ -46,15 +46,30 @@ def loglikelihood(params, xi, yi, sigyi):
     """
     Calculate the log likelihood of the data given the model parameters and noise parameters.
     The likelihood is calculated using the formula:
-    Li = (1 - Pb) / sqrt(sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) 
-        + Pb / sqrt(Vb + sigyi**2) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
+    Li = (1 - Pb) / sqrt(2 * pi * sigyi**2) * exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) 
+        + Pb / sqrt(2 * pi * (Vb + sigyi**2)) * exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))
+
+    We are also utilising the logaddexp function to avoid runtime overflow and underflow errors. 
+    It does not stop the execution of the code, however, this prevents any overflow or underflow.
     """
     # Unpack the parameters
     m, b, Pb, Yb, Vb = params
+
     
-    return np.sum(np.log((1 - Pb) / np.sqrt(sigyi**2) * 
-                         np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
-                         Pb / np.sqrt(Vb + sigyi**2) * np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
+    term1 = np.log(1 - Pb) - 0.5 * np.log(2 * np.pi * sigyi**2) - 0.5 * ((yi - (m * xi + b)) / sigyi)**2
+    term2 = np.log(Pb) - 0.5 * np.log(2 * np.pi * (Vb + sigyi**2)) - 0.5 * ((yi - Yb)**2 / (Vb + sigyi**2))
+
+    logpos = np.sum(np.logaddexp(term1, term2))
+
+    return logpos
+
+    # return np.sum(np.log((1 - Pb) / np.sqrt(2 * np.pi * sigyi**2) * 
+    #                      np.exp(-0.5 * ((yi - (m * xi + b)) / sigyi)**2) + 
+    #                      Pb / np.sqrt(2 * np.pi * (Vb + sigyi**2)) * 
+    #                      np.exp(-0.5 * ((yi - Yb)**2 / (Vb + sigyi**2)))))
+
+
+
 
 def logposterior(params, xi, yi, sigyi):
     lp = logprior(params)
@@ -74,11 +89,11 @@ def run_mcmc(xi, yi, sigyi, nwalkers=200, nsteps_burn=500, nsteps_prod=1000):
 
     p0 = np.empty((nwalkers, 5))
 
-    p0[:, 0] = np.random.uniform(0, 2, size=nwalkers)   # m
-    p0[:, 1] = np.random.uniform(0, 200, size=nwalkers) # b
-    p0[:, 2] = np.random.uniform(0, 0.1, size=nwalkers)    # Pb
-    p0[:, 3] = np.random.uniform(0, 200, size=nwalkers) # Yb
-    p0[:, 4] = np.random.uniform(0, 100, size=nwalkers)   # Vb
+    p0[:, 0] = np.random.uniform(0, 2, size=nwalkers)       # m
+    p0[:, 1] = np.random.uniform(0, 200, size=nwalkers)     # b
+    p0[:, 2] = np.random.uniform(0, 0.1, size=nwalkers)     # Pb
+    p0[:, 3] = np.random.uniform(0, 200, size=nwalkers)     # Yb
+    p0[:, 4] = np.random.uniform(0, 100, size=nwalkers)     # Vb
 
     # Create the sampler
     sampler = emcee.EnsembleSampler(nwalkers, ndim, logposterior, args=(xi, yi, sigyi))
@@ -290,10 +305,11 @@ def main():
     run_calculation(x, y, sigy / 2, "b")
     matrix_method(x, y, sigy / 2)
     
-    print("\nFor the current example, the median statistics is almost exactly "
-          "the same as the matrix uncertainties, provided that the the model has only "
-          "one mode. When the uncertainty is reduced by half, the solution is multimodal, "
-          "and hence the values dont match very well for that case.\n")
+    print("\nFor the current example, the median statistics is almost exactly the same "
+          "as the matrix uncertainties, in the first case. When the uncertainty "
+          "is reduced by half, the solution is multimodal, and the Pb value has "
+          "increased. That means, now, according to this data, there are still outliers. "
+          "Our model downweights them and hence has bigger uncertainties because of it.\n")
 
 
 if __name__ == "__main__":
