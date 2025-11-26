@@ -129,16 +129,18 @@ def analyze_sampler(sampler):
 
 def plot_data_and_fit(x, y, sigy, sigx, rhoxy, sampler):
     samples = sampler.get_chain(flat=True)
-    theta_mcmc, b_perp_mcmc = np.percentile(samples, [16, 50, 84], axis=0).T
 
-    t_median = theta_mcmc[1]
-    b_perp_median = b_perp_mcmc[1]
+    theta = samples[:, 0]
+    bperp = samples[:, 1]
 
-    slope = np.tan(t_median)
-    intercept = b_perp_median / np.cos(t_median)
+    slope_samples = np.tan(theta)
+    intercept_samples = bperp / np.cos(theta)
+
+    slope_lo, slope_med, slope_hi = np.percentile(slope_samples, [16, 50, 84])
+    int_lo,   int_med,   int_hi   = np.percentile(intercept_samples, [16, 50, 84])
 
     x_fit = np.linspace(0, 300, 100)
-    y_fit = slope * x_fit + intercept
+    y_fit = slope_med * x_fit + int_med
 
 
     c = 1
@@ -169,7 +171,7 @@ def plot_data_and_fit(x, y, sigy, sigx, rhoxy, sampler):
                         transOffset=ax.transData, facecolors='none', edgecolors='black', linewidths=1.5, alpha=0.7)
     ax.add_collection(ec)
 
-    plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {slope:.2f}x + {intercept:.2f}')
+    plt.plot(x_fit, y_fit, 'r-', label=f'Fit: y = {slope_med:.2f}x + {int_med:.2f}')
     plt.scatter(x, y, color='blue', label='Data Points')
     plt.errorbar(x.flatten(), y.flatten(), yerr=sigy, xerr=sigx, fmt='o', capsize=3, capthick=2, label='Data')
     plt.xlabel('x')
