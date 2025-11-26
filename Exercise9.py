@@ -187,6 +187,7 @@ def plot_results(part, samples):
     plt.savefig(f'Exercise9_{part}_histogram.png', bbox_inches='tight')
     plt.savefig(f'Exercise9_{part}_histogram.pdf', bbox_inches='tight')
     # plt.show()
+    plt.close()
     return samples
 
 
@@ -202,6 +203,7 @@ def plot_chains(sampler):
         ax.set_ylabel(labels[i])
     axes[-1].set_xlabel("Step number")
     # plt.show()
+    plt.close()
 
 
 def plot_fit_with_samples(x, y, sigy, part, samples, n_samples_to_plot=10):
@@ -232,6 +234,7 @@ def plot_fit_with_samples(x, y, sigy, part, samples, n_samples_to_plot=10):
     plt.savefig(f'Exercise9_{part}_fit.png', bbox_inches='tight')
     plt.savefig(f'Exercise9_{part}_fit.pdf', bbox_inches='tight')
     # plt.show()
+    plt.close()
 
 
 def matrix_method(x, y, sigy):
@@ -291,6 +294,7 @@ def run_calculation(x, y, sigy, part):
     plt.savefig(f'Exercise9_{part}_corner.png', bbox_inches='tight')
     plt.savefig(f'Exercise9_{part}_corner.pdf', bbox_inches='tight')
     # plt.show()
+    plt.close()
 
     # print("Exiting the program...")
     # import sys
@@ -304,6 +308,8 @@ def main():
     matrix_method(x, y, sigy)
     run_calculation(x, y, sigy / 2, "b")
     matrix_method(x, y, sigy / 2)
+
+    print("\nThe Plots are saved as Exercise9_a_*.png/pdf and Exercise9_b_*.png/pdf respectively.\n")
     
     print("\nFor the current example, the median statistics is almost exactly the same "
           "as the matrix uncertainties, in the first case. When the uncertainty "
