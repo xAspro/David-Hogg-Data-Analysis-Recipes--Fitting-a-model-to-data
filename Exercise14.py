@@ -154,10 +154,10 @@ def plot_data_and_fit(x, y, sigy, sigx, rhoxy, sampler):
 
 
 
-# # Run MCMC
-# sampler = run_mcmc(x, y, sigy, sigx, rhoxy, nwalkers=100, n_burn=1000, n_prod=5000)
-# analyze_sampler(sampler)
-# plot_data_and_fit(x, y, sigy, sigx, rhoxy, sampler)
+# Run MCMC
+sampler = run_mcmc(x, y, sigy, sigx, rhoxy, nwalkers=100, n_burn=1000, n_prod=5000)
+analyze_sampler(sampler)
+plot_data_and_fit(x, y, sigy, sigx, rhoxy, sampler)
 
 
 
