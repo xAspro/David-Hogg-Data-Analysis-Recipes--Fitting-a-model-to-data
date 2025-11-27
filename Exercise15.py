@@ -1,5 +1,5 @@
 """
-Reproducing the Figure 12 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
+Reproducing the Figure 11 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
 Compares forward and reverse fitting without the outliers. The result is significantly different.
 
