@@ -93,7 +93,7 @@ def analyze_sampler(sampler):
                                 labels=[r'$\theta$', r'$b_\perp$'],
                                 truths=None,
                                 show_titles=True)
-    corner_fig.savefig('Exercise13_corner.png', bbox_inches='tight')
+    corner_fig.savefig('Exercise14_corner.png', bbox_inches='tight')
     plt.show()
 
 
@@ -148,7 +148,7 @@ def plot_data_and_fit(x, y, sigy, sigx, rhoxy, sampler):
     plt.ylim(0, 700)
     plt.legend()
     plt.grid()
-    plt.savefig('Exercise13.png', bbox_inches='tight')
+    plt.savefig('Exercise14.png', bbox_inches='tight')
     plt.show()
     
 

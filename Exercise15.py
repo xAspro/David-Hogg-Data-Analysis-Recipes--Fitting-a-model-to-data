@@ -74,5 +74,6 @@ plt.xlim(0, 300)
 plt.ylim(0, 700)
 plt.legend()
 plt.grid(True)
+plt.savefig('Exercise15.png', bbox_inches='tight')
 plt.show()
 

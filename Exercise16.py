@@ -1,7 +1,7 @@
 """
 Reproducing the Figure 12 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Principal Component Analysis for inliers.
+Principal Component Analysis for inliers. The fit doesnt even look at the uncertainties in x and y.
 
 """
 import numpy as np
@@ -25,45 +25,20 @@ sigx = sigx[4:]
 def compute_Q(x, y, sigy, sigx):
     N = len(x)
     Zi = np.vstack((x.ravel(), y.ravel()))
-    print("Zi matrix:")
-    print(Zi)
-
     z_mean = np.mean(Zi, axis=1, keepdims=True)
-    print("z_mean:")
-    print(z_mean)
-
     delta_i = Zi - z_mean
-    print("Delta_i:")
-    print(delta_i)
-
     Qi = delta_i @ delta_i.T
-
-    print("Qi matrix:")
-    print(Qi)
-
     return Qi, z_mean
 
 def principal_eigvec(Q):
     eigvals, eigvecs = np.linalg.eig(Q)
-    print("\n\nEigenvalues:")
-    print(eigvals)
-    print("Eigenvectors:")
-    print(eigvecs)
+    
     D = np.diag(eigvals)
     P = eigvecs
-    print("Diagonal matrix D:")
-    print(D)
-    print("Matrix P of eigenvectors:")
-    print(P)
-
-    print("Check: P^T Q P = D")
-    print(P.T @ Q @ P)
-
+    
     biggest_eigval_index = np.argmax(eigvals)
     principal_eigvec = eigvecs[:, biggest_eigval_index]
-    print("Principal eigenvector:")
-    print(principal_eigvec)
-
+    
     return principal_eigvec
 
 def plot_data_and_fit(x, y, sigy, sigx, principal_eigvec, Z_mean):
@@ -75,6 +50,7 @@ def plot_data_and_fit(x, y, sigy, sigx, principal_eigvec, Z_mean):
     intercept = (Z_mean[1] - slope * Z_mean[0])[0]
     yfit = intercept + slope * xfit
     plt.plot(xfit, yfit, 'r', label=f"Principal Component Fit: y = {slope:.2f}x + {intercept:.2f}")
+    print(f"\n\nPrincipal Component Fit: y = {slope:.2f}x + {intercept:.2f}\n\n")
     plt.scatter(Z_mean[0], Z_mean[1], color='red', label='Mean Point', zorder=5, s=100)
     plt.xlabel("x")
     plt.ylabel("y")
@@ -82,8 +58,9 @@ def plot_data_and_fit(x, y, sigy, sigx, principal_eigvec, Z_mean):
     plt.ylim(0, 700)
     plt.grid()
     plt.legend()
+    plt.savefig('Exercise16.png', bbox_inches='tight')
     plt.show()
 
 Q, z_mean = compute_Q(x, y, sigy, sigx)
 v = principal_eigvec(Q)
-plot_data_and_fit(x, y, sigy, sigx, rhoxy, v, z_mean)
+plot_data_and_fit(x, y, sigy, sigx, v, z_mean)
