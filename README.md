@@ -30,7 +30,12 @@ Repeat Exercise 1 using *all* points.
 Compare slope uncertainty and discuss issues introduced by the extra points.
 
 ### **Exercise 3**  
-Extend the linear model to a quadratic fit \( g(x) = qx^2 + mx + b \).  
+Extend the linear model to a quadratic fit
+
+$$
+g(x) = q x^2 + m x + b
+$$
+
 Plot and compare to Figure 3.
 
 ### **Exercise 4**  
@@ -39,8 +44,16 @@ Show that the MLE is the weighted mean.
 
 ### **Exercise 5**  
 Use matrix calculus to show that minimizing  
-\( \chi^2 = (y - AX)^T C^{-1} (y - AX) \)  
-gives the normal equation \( X = (A^T C^{-1} A)^{-1} A^T C^{-1} y \).
+
+$$
+\chi^2 = (y - A X)^{\mathsf T} C^{-1} (y - A X)
+$$
+
+gives the normal equation
+
+$$
+X = (A^{\mathsf T} C^{-1} A)^{-1} A^{\mathsf T} C^{-1} y
+$$
 
 ### **Exercise 6**  
 Fit a line using a Bayesian mixture model to handle outliers.  
@@ -113,6 +126,15 @@ This project provides a complete worked solution set to the Hogg (2010) paper, d
 - Proper marginalization and extraction of posterior limits  
 
 The scripts serve as a reference for students and researchers learning rigorous statistical modeling for scientific data.
+
+---
+## 📂 Extra Implementations
+
+Additional exploratory scripts—mostly rough work and extended Bayesian or mixture-model experiments—are available here:
+
+**`Extra Implementation/`**  
+
+These are *not part of the official exercises*, but provide useful additional insight.
 
 ---
 
