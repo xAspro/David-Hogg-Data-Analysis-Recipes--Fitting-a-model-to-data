@@ -1,7 +1,10 @@
 """
 Reproducing the Figure 11 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Compares forward and reverse fitting without the outliers. The result is significantly different.
+Compares forward and reverse fitting without the outliers. The results are significantly different.
+The uncertainties are considered symmetric in x and y which might not be true in real life examples. 
+Additionally, there is no real dependant variable, which means both the variables are equally reliable 
+and that is a questionable assumption, because the uncertainties in the two directions are typically not the same.
 
 """
 

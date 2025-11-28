@@ -68,7 +68,7 @@ def jackknife(x, y, sigy, params):
     return sigma_b, sigma_m, cov_b_m
 
 def bootstrap(x, y, sigy, params, n_bootstrap=1000):
-    b, m, db, dm, cov = params
+    b, m, _, _, _ = params
 
     b_bootstrap = np.zeros(n_bootstrap)
     m_bootstrap = np.zeros(n_bootstrap)

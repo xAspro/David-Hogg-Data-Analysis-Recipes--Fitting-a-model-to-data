@@ -1,3 +1,7 @@
+"""
+Does Bayesian Inference and Marginalisation for the linear fit with same uncertainty.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import emcee
@@ -64,12 +68,6 @@ def run_mcmc(x, y, nwalkers=100, n_burn=200, n_prod=1500):
     sampler.reset()
     sampler.run_mcmc(None, n_prod, progress=True)
 
-    # Print the maximum likelihood value for each parameter
-    max_likelihood_params = sampler.flatchain[np.argmax(sampler.flatlnprobability)]
-    print("Maximum Likelihood Parameters:")
-    print(f"m = {max_likelihood_params[0]:.2f}")
-    print(f"b = {max_likelihood_params[1]:.2f}")
-    print(f"sigy = {np.sqrt(max_likelihood_params[2]):.2f}")
 
     return sampler
 

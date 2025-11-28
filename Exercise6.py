@@ -1,7 +1,7 @@
 """
 Reproducing the Figure 4 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Considering all the data points for a linear fit with outliers
+Considering all the data points for a linear fit with outliers. This method is able to handle outliers effectively.
 
 """
 

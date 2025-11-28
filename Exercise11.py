@@ -43,6 +43,9 @@ def calc_chi_sq(sigy):
 
 def plot():
 
+    N = len(x)
+    dof = N - 2
+
     S = np.arange(10, 1500, 1)
     S_sqrt = np.sqrt(S)
     chi_sq = np.ones_like(S_sqrt, dtype=float)
@@ -53,9 +56,10 @@ def plot():
         t = calc_chi_sq(temp[i]).item()
         chi_sq[i] = t
 
+        if chi_sq[i-1] > dof and chi_sq[i] <= dof:
+            S_dof = S[i]
+            print(f"\nS value for which chi-squared equals degrees of freedom ({dof}): S = {S_dof}")
 
-    N = len(x)
-    dof = N - 2
 
     plt.plot(S, chi_sq, label='Chi-squared statistic')
     plt.axhline(y=dof, color='r', linestyle='--', label='Degrees of freedom')
@@ -77,6 +81,17 @@ def plot():
 
     print("\nThe plots are stored as 'Exercise11_chi_squared_vs_S.png/pdf' and 'Exercise11_chi_squared_vs_S_zoomed.png/pdf'\n")
 
+    return S_dof
+
 
 if __name__ == "__main__":
-    plot()
+    S_dof = plot()
+
+    mean_sigy =  np.mean(sigy)
+    rms_sigy = np.sqrt(np.mean(sigy**2))
+    median_sigy = np.median(sigy)
+
+    print(f"Mean of sig_y: {mean_sigy:.2f}")
+    print(f"RMS of sig_y: {rms_sigy:.2f}")
+    print(f"Median of sig_y: {median_sigy:.2f}\n")
+    print(f"sqrt(S) value for which chi-squared equals degrees of freedom: {np.sqrt(S_dof):.2f}\n")

@@ -1,7 +1,7 @@
 """
 Reproducing the Figure 10 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Plots bestfit line while accounting for both x and y uncertainties with outliers
+Plots bestfit line while accounting for both x and y uncertainties with outliers handling.
 
 """
 
@@ -167,7 +167,7 @@ def log_prior_2(params):
     t, b_perp, Pb, xb, yb, Vx, Vy = params
     if not (0.0 < t < 2 * np.pi and -1e4 < b_perp < 1e4 and
             0.0 < Pb < 1.0 and -1e4 < xb < 1e4 and -1e4 < yb < 1e4 and
-            0.0 < Vx < 1e4 and 0.0 < Vy < 1e4):
+            0.0 < Vx < 1e5 and 0.0 < Vy < 1e5):
         return -np.inf
     return 0.0
 

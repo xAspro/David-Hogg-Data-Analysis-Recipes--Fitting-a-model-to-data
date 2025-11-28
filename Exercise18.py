@@ -2,6 +2,8 @@
 Reproducing the Figure 14 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
 Plotting the histogram of intrinsic variance V from MCMC samples.
+Only the upper limit is important, because the value for V is constrained to be positive.
+Only the upper limit has physical meaning.
 
 """
 

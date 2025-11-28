@@ -8,8 +8,7 @@ This shows how important the uncertainties are, and are an important and integra
 The uncertainties capture how much we trust the data points. Along with that, our mixture model adds 
 a bit more trustworthiness to the analysis. That is by introducing Pb. In the first case, we have 
 removed the outliers and Pb is almost 0. But when we reduce the uncertainties, Pb increases, meaning
-that even after removing the outliers, our model still thinks there are outliers in the data.
-Which is true for this case. 
+that even after removing the outliers, our model still sees that, there are outliers in the data.
 """
 
 
@@ -312,8 +311,8 @@ def main():
     print("\nThe Plots are saved as Exercise9_a_*.png/pdf and Exercise9_b_*.png/pdf respectively.\n")
     
     print("\nFor the current example, the median statistics is almost exactly the same "
-          "as the matrix uncertainties, in the first case. When the uncertainty "
-          "is reduced by half, the solution is multimodal, and the Pb value has "
+          "as the matrix uncertainties, in the first case. When the uncertainty is "
+          "reduced by half, the posterior is multimodal(and larger), and the Pb value has "
           "increased. That means, now, according to this data, there are still outliers. "
           "Our model downweights them and hence has bigger uncertainties because of it.\n")
 

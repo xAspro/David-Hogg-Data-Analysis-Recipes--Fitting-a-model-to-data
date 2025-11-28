@@ -1,7 +1,7 @@
 """
 Reproducing the Figure 2 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Considering all the data points for a linear fit
+Considering all the data points for a linear fit. The new points included shifts the fit significantly.
 
 """
 

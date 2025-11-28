@@ -1,7 +1,8 @@
 """
 Reproducing the Figure 5 in David Hogg's paper "Data analysis recipes: Fitting a model to data"
 
-Considering all the data points for a linear fit with outlier model with smaller uncertainties
+Considering all the data points for a linear fit with outlier model with smaller uncertainties.
+After reducing the uncertainty, Pb increases, indicating a higher probability of points being outliers.
 
 """
 
